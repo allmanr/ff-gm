@@ -68,7 +68,7 @@ Historical discussion belongs in `docs/meetings/`. Technical detail may live in 
 
 ## D-007 — 2026-09-27 — Optimize prompts for reusable-prefix caching
 
-**Decision:** Keep stable tools/instructions/LeagueContext ahead of more dynamic snapshot/task/query data and avoid needless dynamic values in reusable prefixes.
+**Decision:** Keep stable tools/instructions/semantic league rules ahead of dynamic validation timestamps, snapshots, and task/query data. Enforce freshness in application code; never retain old validation evidence for a cache hit.
 
 **Rationale:** Reduce repeated input cost without distorting the architecture.
 
@@ -105,3 +105,44 @@ Historical discussion belongs in `docs/meetings/`. Technical detail may live in 
 **Rationale:** GPT-6 is the current OpenAI model family for new complex reasoning and Codex work. Astra maximizes capability; Sol provides a better cost/capability balance for repeated production workloads.
 
 **Status:** active
+
+---
+
+## D-011 — 2026-09-27 — Public source, private service; spending remains explicit
+
+**Decision:** Keep this repository public and authenticate the deployed service. The Owner currently uses ChatGPT Plus and Vercel Hobby; no additional recurring spend is approved. Milestones 0–1 require no model API calls. API-backed automation needs a separate budget decision before activation.
+
+**Rationale:** The Owner confirmed this exposure model and had expected subscription/free plans to cover operation. Preserve the useful deterministic foundation while resolving later costs honestly.
+
+**Status:** active
+**Source:** [Codex review](meetings/2026-09-27-codex-spec-review.md)
+
+---
+
+## D-012 — 2026-09-27 — Ship prerequisites with the features that need them
+
+**Decision:** Milestone 1 includes minimal Postgres persistence for context, owner selection, sync inputs, and the player cache. Milestone 2 expands history/jobs. Milestone 4 includes the minimum recommendation ledger; Milestone 7 expands outcomes/evaluation. Keep the initial stop after Milestone 1.
+
+**Rationale:** Durable owner selection cannot wait until after it ships; auditable recommendations cannot precede their ledger.
+
+**Status:** active — engineering clarification of the existing durability/audit requirements
+
+---
+
+## D-013 — 2026-09-27 — Enforce correctness and repair authority outside prompts
+
+**Decision:** Application code validates task inputs before analytical calls and before publication. Trusted policy checks the exact tested repair commit; repair credentials cannot bypass or weaken those gates. Validate raw upstream responses before promoting them to authoritative state.
+
+**Rationale:** Instructions alone cannot enforce freshness, concurrency, persistence, or merge permissions. Preserve autonomous low-risk repairs under D-008.
+
+**Status:** active — implementation of D-003/D-008
+
+---
+
+## D-014 — 2026-09-27 — Avoid unnecessary agents and model passes
+
+**Decision:** Staff titles describe responsibilities. Use deterministic services and one GM first; consult specialists only for distinct needed work. Use code for routine notices and release detection, Sol for routine monthly synthesis, and Astra for substantive migration evaluation. Cheaper semantic tasks require evidence/recall checks, not just schema validation.
+
+**Rationale:** Remove repeated work before trading model quality for lower token prices. Keep D-010's initial Astra implementation and Sol production defaults.
+
+**Status:** active — cost/workflow refinement from this review
