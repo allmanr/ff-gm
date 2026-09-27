@@ -7,3 +7,4 @@ Agents should **not** load every meeting note by default. Read `PROJECT_STATE.md
 ## 2026-09-27
 
 - [`meetings/2026-09-27-front-office-planning.md`](meetings/2026-09-27-front-office-planning.md) — Initial front-office concept, staff design, architecture, model routing, autonomous SRE, external architecture review, and project-memory policy.
+- [`meetings/2026-09-27-codex-spec-review.md`](meetings/2026-09-27-codex-spec-review.md) — Final engineering review, corrected milestone dependencies, account/budget constraints, model-cost recommendations, and Codex handoff.

@@ -80,6 +80,24 @@ Implement Milestone 0 and Milestone 1 before building the full staff.
 
 Do not overbuild.
 
+Use `docs/IMPLEMENTATION_PLAN.md` for the initial handoff and acceptance sequence. Milestones 0–1 need no model API calls; their small durable Postgres foundation is in scope. Build only the active milestone's tables/tools, not the entire target layout.
+
+## Current account and exposure constraints
+
+- Public source repository; private service. Keep strategy, operational records, and personal data out of public fixtures/docs.
+- Owner currently has ChatGPT Plus and Vercel Hobby. No additional recurring spend is approved.
+- Production Agents API calls require separate API billing. Do not treat a subscription session as an API credential.
+- Private routes must enforce server-side authentication; previews use isolated data and credentials.
+- Budget/scheduler configuration must be settled before enabling recurring production work.
+
+## Implementation workflow
+
+Use one accountable implementation chat per coherent milestone. Continue that chat for related fixes; start a fresh one at a milestone boundary with a short repository handoff. Do not load the whole spec or meeting archive repeatedly for localized tasks.
+
+Choose routine implementation details autonomously within the approved design. Record material choices and unresolved blockers. A blocker in deployment/authentication should not stop independent local implementation and tests. Never report an unrun live/deployment check as passed.
+
+Use `codex/` branches and coherent commits. Keep dependency lockfiles, sanitized fixtures, and reproducible CI. Do not give routine work a mandatory extra model-review pass; use focused Astra review for correctness boundaries, security, architecture, or repeated failures.
+
 
 ## Agent-runtime state
 
