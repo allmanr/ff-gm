@@ -333,7 +333,9 @@ export async function freeAgentsCommand(session: Session, opts: Options): Promis
     "",
     table(["Player", "Pos", "NFL", "Age", "Inj", "Depth", "Adds 24h", "Adds 72h", "Value", "G", "PPG", "L3", "Sleeper ID"], rows),
     "",
-    (opts.sort === "ppg"
+    (opts.sort === "ppg" && !stats.book
+      ? "PPG sorting unavailable; sorted by market value where available."
+      : opts.sort === "ppg"
       ? "Sorted by points per game in this league's scoring."
       : "Sorted by market value, then Sleeper search rank (a popularity proxy, not a projection).") +
       " PPG/L3 = league-scored points per game, season / last 3 games. Adds are across all Sleeper leagues (top 100 only). " +

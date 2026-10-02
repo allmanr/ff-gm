@@ -71,7 +71,7 @@ export async function waiversCommand(session: Session, opts: Options): Promise<s
       `W${t.leg}`,
     ]);
   const paid = won.map((t) => t.settings?.waiver_bid ?? 0).sort((a, b) => a - b);
-  const median = paid.length ? paid[Math.floor(paid.length / 2)]! : null;
+  const median = paid.length ? (paid[Math.floor((paid.length - 1) / 2)]! + paid[Math.floor(paid.length / 2)]!) / 2 : null;
 
   return [
     header(ctx, "Waivers"),

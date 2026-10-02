@@ -25,5 +25,5 @@ for (let week = 1; week <= last; week++) {
 }
 console.log(`Scoring check, weeks 1-${last}: ${match} match, ${misses.length} differ.`);
 for (const m of misses.slice(0, 20)) console.log(`  ${m}`);
-if (book.unsupported.length) console.log(`Keys assumed 0 (not in source): ${book.unsupported.join(", ")}`);
-process.exitCode = misses.length ? 1 : 0;
+if (match === 0 && misses.length === 0) console.error("No comparable scores; scoring has not been verified.");
+process.exitCode = misses.length || match === 0 ? 1 : 0;

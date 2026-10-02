@@ -45,18 +45,31 @@ export const STAT_COLUMNS = [
  * defense, and IDP keys are excluded when the league has no such slots.
  */
 export function unsupportedScoringKeys(ctx: LeagueContext): string[] {
+  const positions = ctx.roster.startablePositions;
   return ctx.scoring
-    .filter((x) => (x.category === "offense" || x.category === "special_teams" || x.category === "unresolved") && x.value !== 0)
+    .filter((x) => x.value !== 0 && (
+      x.category === "offense" || x.category === "special_teams" || x.category === "unresolved" ||
+      (x.category === "kicker" && positions.includes("K")) ||
+      (x.category === "team_defense" && positions.includes("DEF")) ||
+      (x.category === "idp" && positions.some((p) => ["DL", "LB", "DB"].includes(p)))
+    ))
     .map((x) => x.key)
     .filter((k) => !(k in STAT_FOR_KEY) && !Object.values(POSITION_RECEPTION_BONUS).includes(k));
 }
 
+export function requireSupportedScoring(ctx: LeagueContext): void {
+  const unsupported = unsupportedScoringKeys(ctx);
+  if (unsupported.length) {
+    throw new Error(`stat source cannot supply scoring keys (${unsupported.join(", ")}); cannot score stats exactly`);
+  }
+}
+
 /**
  * Fantasy points for a stat line under this league's exact scoring. Reception bonuses follow the
- * player's primary (Sleeper) position, never the lineup slot. Verified to reproduce Sleeper's
- * players_points for every rostered player-week in weeks 1–3 of 2026 (749/749).
+ * player's primary (Sleeper) position, never the lineup slot. Refuses incomplete source coverage.
  */
 export function scoreStatLine(ctx: LeagueContext, position: string, s: StatLine): number {
+  requireSupportedScoring(ctx);
   let total = 0;
   for (const { key, value } of ctx.scoring) {
     if (value === 0) continue;

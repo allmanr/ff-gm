@@ -28,7 +28,7 @@ Every command validates the league and roster ownership before printing anything
 
 ## Phase 3 — added after real gaps (done)
 
-League Watcher (`ff changes`), league history, FantasyCalc values, NFL schedule and lines, observed waiver timing, exact league scoring of nflverse stats (verified 749/749 against Sleeper), lineup optimizer (matches Sleeper max PF).
+League Watcher (`ff changes`), league history, FantasyCalc values, NFL schedule and lines, observed waiver timing, nflverse scoring with source-coverage refusal (currently unavailable because `st_ff` and `st_fum_rec` are missing; the earlier 749/749 comparison assumed those keys were zero), lineup optimizer (matches Sleeper max PF).
 
 ## Next — only when real use shows the need
 

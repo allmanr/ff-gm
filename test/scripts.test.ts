@@ -112,3 +112,21 @@ describe("privacy leak check", () => {
     expect(check().status).toBe(1);
   });
 });
+
+describe("live scoring verifier", () => {
+  it("fails when there are no comparable scores", () => {
+    const repo = sandbox();
+    mkdirSync(join(repo, "src/sleeper"));
+    copyFileSync(join(repoRoot, "scripts/verify-scoring.ts"), join(repo, "scripts/verify-scoring.ts"));
+    writeFileSync(join(repo, "package.json"), '{"type":"module"}');
+    writeFileSync(join(repo, "src/sleeper/client.ts"), "export const createSleeperClient = () => ({});\n");
+    writeFileSync(join(repo, "src/session.ts"), `export const createSession = () => ({
+      data: async () => ({ league: { settings: { last_scored_leg: 1 } } }),
+      stats: async () => ({ byPlayer: new Map() }),
+      matchups: async () => [],
+    });\n`);
+    const result = spawnSync(process.execPath, [join(repo, "scripts/verify-scoring.ts")], { encoding: "utf8" });
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("No comparable scores; scoring has not been verified.");
+  });
+});

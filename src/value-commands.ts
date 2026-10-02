@@ -117,6 +117,7 @@ export async function tradeCommand(session: Session, give: string | undefined, g
   if (!give || !get) {
     throw new UsageError('Usage: ff trade "<assets we give>" "<assets we get>"  e.g. ff trade "Player A, 2027 R2" "Player B"');
   }
+  const ownerRosterId = await session.ownerRosterId();
   const data = await session.data();
   const { ctx, rosters } = data;
   const [db, book, { picks }] = await Promise.all([session.players(), requireValues(session), ownedPicks(session, data)]);
@@ -162,7 +163,6 @@ export async function tradeCommand(session: Session, give: string | undefined, g
   ];
   const diff = sum(getAssets) - sum(giveAssets);
   const missing = [...giveAssets, ...getAssets].filter((x) => x.value === null).map((x) => x.label);
-  const ownerRosterId = ctx.owner.status === "verified" ? ctx.owner.rosterId : null;
   const ownerPicks = picks.filter((p) => p.ownerRosterId === ownerRosterId);
 
   return [

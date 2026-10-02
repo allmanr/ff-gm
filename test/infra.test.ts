@@ -65,6 +65,15 @@ describe("player cache", () => {
     expect((await loadPlayerDb({ cacheDir, fetchPlayers })).refreshed).toBe(true);
   });
 
+  it("honors the daily cache even when manual refresh is requested", async () => {
+    const { cacheDir } = setup();
+    const fetchPlayers = vi.fn(async () => players);
+    await loadPlayerDb({ cacheDir, fetchPlayers, refresh: true });
+    const result = await loadPlayerDb({ cacheDir, fetchPlayers, refresh: true });
+    expect(result.refreshed).toBe(false);
+    expect(fetchPlayers).toHaveBeenCalledTimes(1);
+  });
+
   it("keeps a stale cache when the download fails", async () => {
     const { cacheDir, file } = setup();
     writeFileSync(file, JSON.stringify(players));

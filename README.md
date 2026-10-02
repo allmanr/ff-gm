@@ -5,7 +5,7 @@ A private fantasy-football front office with public source code. The Owner makes
 ## How it works
 
 - **`ff`** — a TypeScript CLI over Sleeper's documented API. Every command first verifies the league's format (dynasty, Superflex, full PPR, TE reception bonus) and roster ownership, and refuses to print football data if anything fails.
-- **`scripts/gm`** — validates the league, assembles the GM's instructions (`gm/CHARTER.md` plus the generated League Constitution) in `private/`, and starts a Codex session there with web search.
+- **`scripts/gm`** — validates the league and starts Codex in `private/` with web search. The trusted charter supplies instructions; the generated League Constitution stays in a separate data file.
 - **`private/`** — gitignored and kept in its own private repository: Owner identity, constitution, GM notes, reports.
 
 ## Setup
@@ -31,7 +31,7 @@ bin/ff context           # validate and write private/LEAGUE_CONSTITUTION.md
 bin/ff roster            # your roster: byes, weekly league points, market value, FAAB left, picks
 bin/ff schedule          # this week's games, byes, kickoffs (CT), Vegas implied totals, your players' games
 bin/ff changes           # what changed in the league since the last run
-bin/ff free-agents --pos TE --sort ppg   # waiver wire with league-scored points per game
+bin/ff free-agents --pos TE --sort ppg   # PPG where source coverage permits; otherwise a visible unavailable note
 bin/ff waivers           # when waivers actually run, FAAB left per team, winning bids
 bin/ff bench --week 3    # hindsight: actual lineup vs best possible
 bin/ff values --league   # dynasty market value by team (FantasyCalc)
@@ -46,6 +46,8 @@ scripts/gm brief war-room                        # Tuesday prep (also: recap, li
 The GM defaults to `gpt-6-sol` with high reasoning; set `FF_GM_MODEL` / `FF_GM_EFFORT` to change it (e.g. `FF_GM_EFFORT=medium` for routine questions; one deep run can use ~190k tokens). Briefs live in `gm/briefs/`.
 
 Data sources ([D-018](docs/DECISIONS.md)): Sleeper's documented API (league facts), FantasyCalc.com (dynasty market values; non-commercial, attributed, at most one request per hour), and nflverse (schedule, lines, weekly stats; CC-BY-4.0). RotoWire and KeepTradeCut are off-limits by their terms.
+
+nflverse scoring refuses any active rule the source cannot supply. The current league enables `st_ff` and `st_fum_rec`, so nflverse PPG is unavailable and the live scoring verifier exits nonzero. Sleeper's own matchup points remain available. `--refresh-players` honors the same 24-hour cache as normal commands.
 
 Developer scripts: `npm run check` (typecheck, lint, tests, leak check), `npm run verify-scoring` (live: engine vs Sleeper's points), `npm run record-fixtures` (re-record anonymized fixtures). All run through `bin/node24`, so an older default Node is fine if Node 24 is installed via nvm.
 

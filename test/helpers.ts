@@ -57,6 +57,9 @@ export function fixtureSession(opts: { overrides?: Overrides; owner?: OwnerConfi
     owner: opts.owner === undefined ? fixtureOwner() : opts.owner,
     cacheDir,
     now: () => new Date("2026-10-02T12:00:00Z"),
+    valuesFetch: async () => { throw new Error("Market values unavailable in this fixture"); },
+    scheduleFetch: async () => { throw new Error("Schedule unavailable in this fixture"); },
+    statsFetch: async () => { throw new Error("Stats unavailable in this fixture"); },
   });
   return { session, calls, cacheDir };
 }

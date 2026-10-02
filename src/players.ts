@@ -10,7 +10,7 @@ type CacheOptions = {
   cacheDir: string;
   fetchPlayers: () => Promise<Record<string, Player>>;
   now?: () => number;
-  /** Download even if the cache is fresh. */
+  /** Compatibility option: refresh requests still honor the daily download limit. */
   refresh?: boolean;
 };
 
@@ -37,7 +37,7 @@ export async function loadPlayerDb(opts: CacheOptions): Promise<{ players: Playe
     }
   };
 
-  if (!opts.refresh && ageMs < PLAYER_CACHE_MAX_AGE_MS) {
+  if (ageMs < PLAYER_CACHE_MAX_AGE_MS) {
     const cached = readCache();
     if (cached) return { players: cached, ageMs, refreshed: false };
   }

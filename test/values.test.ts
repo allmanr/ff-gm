@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { describe, expect, it, vi } from "vitest";
-import { createSession } from "../src/session.ts";
+import { createSession, OwnerUnsetError } from "../src/session.ts";
 import { createSleeperClient } from "../src/sleeper/client.ts";
 import { tradeCommand, valuesCommand } from "../src/value-commands.ts";
 import { FANTASYCALC_ATTRIBUTION, loadValueBook, valueFormat } from "../src/values.ts";
@@ -49,6 +49,13 @@ function valuesSession(valuesFetch = vi.fn(async (_url: string) => Response.json
 }
 
 describe("FantasyCalc format", () => {
+  it("requires verified ownership before fetching values for a trade", async () => {
+    const { session, calls } = fixtureSession({ owner: null });
+    const values = vi.spyOn(session, "values");
+    await expect(tradeCommand(session, "2027 R1", "2027 R2")).rejects.toBeInstanceOf(OwnerUnsetError);
+    expect(values).not.toHaveBeenCalled();
+    expect(calls).not.toContain("/players/nfl");
+  });
   it("derives parameters from the validated league, not constants", async () => {
     const { session } = fixtureSession();
     const { ctx } = await session.data();

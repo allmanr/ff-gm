@@ -120,6 +120,21 @@ describe("commands on recorded data", () => {
 });
 
 describe("ff waivers", () => {
+  it.each([
+    { bids: [1, 9], median: "5" },
+    { bids: [1, 2], median: "1.5" },
+    { bids: [1, 5, 9], median: "5" },
+    { bids: [9], median: "9" },
+    { bids: [], median: "-" },
+  ])("reports the median for $bids", async ({ bids, median }) => {
+    const { waiversCommand } = await import("../src/waivers.ts");
+    const claims = bids.map((bid, i) => ({
+      transaction_id: String(i), type: "waiver", status: "complete", leg: 1,
+      created: 1, status_updated: 1, roster_ids: [1], settings: { waiver_bid: bid },
+    }));
+    const { session } = fixtureSession({ overrides: { transactions_1: claims, transactions_3: [] } });
+    expect(await waiversCommand(session, {})).toContain(`median $${median})`);
+  });
   it("reports observed processing times, FAAB left, and winning bids", async () => {
     const { waiversCommand } = await import("../src/waivers.ts");
     const { session } = fixtureSession();

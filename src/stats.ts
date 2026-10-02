@@ -3,7 +3,7 @@ import { join } from "node:path";
 import type { LeagueContext } from "./context.ts";
 import type { PlayerDb } from "./players.ts";
 import { parseCsv } from "./schedule.ts";
-import { scoreStatLine, STAT_COLUMNS, unsupportedScoringKeys, type StatLine } from "./scoring.ts";
+import { requireSupportedScoring, scoreStatLine, STAT_COLUMNS, type StatLine } from "./scoring.ts";
 import { isStartable } from "./positions.ts";
 
 /** nflverse weekly player stats and season rosters (CC-BY-4.0). Rosters map gsis_id → sleeper_id. */
@@ -47,7 +47,6 @@ export type StatBook = {
   byPlayer: Map<string, WeekScore[]>;
   weeks: number[];
   unmatched: number;
-  unsupported: string[];
   stale: boolean;
   label: string;
 };
@@ -59,10 +58,7 @@ export function buildStatBook(args: {
   rostersCsv: string;
   stale?: boolean;
 }): StatBook {
-  // Unrecognized scoring keys make league-scored points unknowable: refuse rather than assume 0.
-  if (args.ctx.unresolvedScoringKeys.length > 0) {
-    throw new Error(`league has unrecognized scoring keys (${args.ctx.unresolvedScoringKeys.join(", ")}); cannot score stats exactly`);
-  }
+  requireSupportedScoring(args.ctx);
   const toSleeper = new Map<string, string>();
   for (const r of rowsOf(args.rostersCsv)) {
     if (r.gsis_id && r.gsis_id !== "NA" && r.sleeper_id && r.sleeper_id !== "NA") toSleeper.set(r.gsis_id, r.sleeper_id);
@@ -92,18 +88,17 @@ export function buildStatBook(args: {
     byPlayer.set(sleeperId, list);
   }
   for (const list of byPlayer.values()) list.sort((a, b) => a.week - b.week);
-  const unsupported = unsupportedScoringKeys(args.ctx);
   const stale = args.stale ?? false;
   const label =
     `${STATS_ATTRIBUTION}; scored with this league's settings` +
-    (unsupported.length ? ` (not in source, assumed 0: ${unsupported.join(", ")})` : "") +
     (unmatched ? `; ${unmatched} QB/RB/WR/TE stat lines had no Sleeper ID match` : "") +
     (stale ? " (STALE: refresh failed)" : "") +
     ".";
-  return { byPlayer, weeks: [...weeks].sort((a, b) => a - b), unmatched, unsupported, stale, label };
+  return { byPlayer, weeks: [...weeks].sort((a, b) => a - b), unmatched, stale, label };
 }
 
 export async function loadStatBook(opts: { ctx: LeagueContext; db: PlayerDb; cacheDir: string; fetch?: Fetch; now?: number }) {
+  requireSupportedScoring(opts.ctx);
   const fetchImpl = opts.fetch ?? ((url, init) => fetch(url, init));
   const now = opts.now ?? Date.now();
   const season = opts.ctx.season;
