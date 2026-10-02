@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# The ff CLI. Runs src/cli.ts with Node >= 24 (see bin/node24).
+set -euo pipefail
+here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+exec "$here/node24" "$here/../src/cli.ts" "$@"

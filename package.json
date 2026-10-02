@@ -1,0 +1,35 @@
+{
+  "name": "ff-gm",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Validated Sleeper league tools for a fantasy-football GM agent",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "bin": {
+    "ff": "./bin/ff"
+  },
+  "scripts": {
+    "ff": "bin/ff",
+    "typecheck": "bin/node24 node_modules/typescript/bin/tsc --noEmit",
+    "lint": "bin/node24 node_modules/eslint/bin/eslint.js .",
+    "test": "bin/node24 node_modules/vitest/vitest.mjs run",
+    "check": "npm run typecheck && npm run lint && npm test && npm run check-leaks",
+    "record-fixtures": "bin/node24 scripts/record-fixtures.ts",
+    "check-leaks": "bin/node24 scripts/check-leaks.ts",
+    "verify-scoring": "bin/node24 scripts/verify-scoring.ts"
+  },
+  "dependencies": {
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^24.19.1",
+    "eslint": "^10.11.0",
+    "typescript": "~6.0",
+    "typescript-eslint": "^8.71.0",
+    "vitest": "^5.0.3"
+  }
+}

@@ -1,0 +1,80 @@
+[
+ {
+  "user_id": "900000000000000001",
+  "display_name": "manager01",
+  "metadata": {
+   "team_name": "Team 01"
+  }
+ },
+ {
+  "user_id": "900000000000000002",
+  "display_name": "manager02",
+  "metadata": {
+   "team_name": "Team 02"
+  }
+ },
+ {
+  "user_id": "900000000000000004",
+  "display_name": "manager04",
+  "metadata": {
+   "team_name": "Team 04"
+  }
+ },
+ {
+  "user_id": "900000000000000003",
+  "display_name": "manager03",
+  "metadata": {}
+ },
+ {
+  "user_id": "900000000000000010",
+  "display_name": "manager10",
+  "metadata": {
+   "team_name": "Team 10"
+  }
+ },
+ {
+  "user_id": "900000000000000006",
+  "display_name": "manager06",
+  "metadata": {
+   "team_name": "Team 06"
+  }
+ },
+ {
+  "user_id": "900000000000000009",
+  "display_name": "manager09",
+  "metadata": {
+   "team_name": "Team 09"
+  }
+ },
+ {
+  "user_id": "900000000000000008",
+  "display_name": "manager08",
+  "metadata": {}
+ },
+ {
+  "user_id": "900000000000000005",
+  "display_name": "manager05",
+  "metadata": {
+   "team_name": "Team 05"
+  }
+ },
+ {
+  "user_id": "900000000000000007",
+  "display_name": "manager07",
+  "metadata": {
+   "team_name": "Team 07"
+  }
+ },
+ {
+  "user_id": "900000000000000011",
+  "display_name": "manager11",
+  "metadata": {
+   "team_name": "Team 11"
+  }
+ },
+ {
+  "user_id": "900000000000000012",
+  "display_name": "manager12",
+  "metadata": {}
+ }
+]

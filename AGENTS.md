@@ -1,125 +1,60 @@
-# AGENTS.md — Fantasy Football GM
+# AGENTS.md — Fantasy Football GM (engineering)
 
-Read `docs/IMPLEMENTATION_SPEC.md` before making architectural changes.
+Engineering instructions for coding agents working in this repository. The football GM itself runs from `private/` with its own charter (`gm/CHARTER.md`); these rules are for building the tools it uses.
+
+Always read `docs/PROJECT_STATE.md` and `docs/DECISIONS.md`. Read `docs/IMPLEMENTATION_PLAN.md` before starting a new phase.
 
 ## Mission
 
-Build and maintain an always-on fantasy-football front office for Sleeper league `1314802188052090880`.
-
-The human is the Owner. The top-level football agent is the GM.
+A fantasy-football front office for Sleeper league `1314802188052090880`. The human is the Owner; the top-level football agent is the GM. V1 is deliberately small: a validated Sleeper CLI (`ff`) plus one GM agent that uses it. Build the next thing only when its absence is felt.
 
 ## Absolute correctness rule
 
-No football recommendation may be generated without a current validated `LeagueContext`.
+No football recommendation may be generated without a validated league context. Expected invariants, verified against live Sleeper on every run:
 
-Expected league invariants:
-- dynasty;
-- Superflex;
-- full PPR;
-- TE-bonus / TE-premium scoring.
+- dynasty (`settings.type = 2`);
+- Superflex (`SUPER_FLEX` in `roster_positions`);
+- full PPR (`scoring_settings.rec = 1`);
+- TE reception bonus (`scoring_settings.bonus_rec_te > 0`).
 
-These expectations must be verified against Sleeper. Never replace exact Sleeper settings with generic fantasy assumptions.
+Enforcement is mechanical, not a prompt: every `ff` data command validates the league first and exits non-zero on failure, and `scripts/gm` refuses to start the GM if `ff context` fails. Never replace an exact Sleeper setting with a generic fantasy assumption. Changing an expected invariant requires an explicit Owner decision recorded in `docs/DECISIONS.md`, never a code "fix" to make validation pass.
 
-If context is stale, missing, contradictory, or incomplete: refresh and validate. If validation fails, fail closed.
+## Sleeper facts that bite
+
+- IDs are strings. The league ID exceeds JavaScript's safe-integer range; never coerce IDs to numbers. (`roster_id` is a small integer and is fine.)
+- The TE reception bonus applies by the player's primary position and stacks with `rec`; it does not depend on the lineup slot.
+- An unrecognized scoring key is surfaced as unresolved; any calculation that depends on it must refuse rather than treat it as zero.
+- `traded_picks` lists only traded picks. Ownership = every roster's own picks for each season/round, overridden by traded entries (`roster_id` = original team, `owner_id` = current team).
+- `matchups[].players_points` are points under this league's exact scoring — prefer them over recomputing actuals.
+- League IDs are per season; history lives behind `previous_league_id`.
+- The documented API is read-only. The GM advises; the Owner acts in Sleeper.
+- `/players/nfl` is ~5 MB; fetch at most once per day (cached under `.local/cache/`).
+- Use only the documented HTTP API at docs.sleeper.com. No undocumented endpoints or WebSockets.
+
+## Private data — the repository is public
+
+- `private/` is gitignored and is its own private git repository. It holds the Owner identity (`private/owner.json`), the generated constitution, GM notes, strategy, manager profiles, reports, and recommendation history.
+- Never copy Owner identity, strategy, or GM output into committed files, test fixtures, commit messages, issues, or PR text.
+- Committed fixtures are anonymized (`scripts/record-fixtures.ts`). Code must run its tests without `private/`.
 
 ## Engineering rules
 
-- Prefer deterministic code for polling, diffing, math, validation, scheduling, and scoring.
-- Use LLMs for judgment, research synthesis, debugging, planning, and communication.
-- TypeScript strict mode.
-- Runtime validation for external API payloads.
-- Idempotent ingestion and jobs.
-- UTC in storage; user-facing scheduling defaults to America/Chicago.
-- Never commit secrets.
-- Add tests for every bug fixed.
-- Preserve useful history instead of overwriting it.
-- Keep model routing configuration-driven.
-- Keep data and business logic provider-neutral.
-- Do not build a large UI before core football functionality works.
+- TypeScript strict, Node 24 (native type stripping; no build step). Zod for every Sleeper payload. Vitest for tests.
+- Deterministic code for fetching, diffing, math, and validation; the LLM handles judgment and communication.
+- Tests must not hit the network. Add a test for every bug fixed.
+- Keep it boring: no server, database, queue, or framework until a concrete need is recorded in `docs/PROJECT_STATE.md`.
+- Commit on a feature branch with coherent messages. `npm run check` (typecheck + lint + tests) must pass before commit.
 
-## Production safety
+## Deferred, not rejected
 
-Software Dev is intended to resolve routine operational failures autonomously.
-
-It may:
-- branch;
-- patch;
-- test;
-- push;
-- preview-deploy;
-- auto-merge low-risk repairs after all required gates pass;
-- redeploy;
-- rollback to a known-good deployment when appropriate;
-- rerun failed idempotent jobs.
-
-It may not autonomously:
-- expose/rotate secrets;
-- broaden permissions;
-- alter billing/domains;
-- remove repository protections;
-- destructively migrate/delete production data;
-- disable core correctness gates;
-- make major architecture changes;
-- substantially increase budgets.
-
-For a production regression, prefer rollback to last-known-good first, then repair forward.
-
-Do not add a blanket human-approval requirement for ordinary low-risk repair merges. This is a private fantasy-football system with limited blast radius; the point of the SRE agent is to eliminate routine manual babysitting.
-
-## Implementation model
-
-For the initial Milestones 0–1 handoff, use **GPT-6 Astra with xhigh reasoning** in Codex.
-
-For later routine implementation, default to **GPT-6 Sol / high**. Escalate hard debugging, architecture, security, or repeated failures to **GPT-6 Astra / xhigh or max**.
-
-Do not choose a cheaper model for critical architecture/debugging merely to reduce tokens.
-
-## Initial scope
-
-Implement Milestone 0 and Milestone 1 before building the full staff.
-
-Do not overbuild.
-
-
-## Agent-runtime state
-
-Use OpenAI Agents API as the preferred managed runtime, but never make provider-owned session state the sole system of record.
-
-Mission-critical knowledge must be persisted in Postgres and/or versioned repository configuration. Any agent session must be disposable and reconstructable.
+The autonomous Software Dev/SRE agent (D-008), AI Guru, Rookie Scout, hosted deployment, and scheduled jobs are deferred until V1 is in regular use. When the SRE agent is built, D-008's policy applies: low-risk repairs may auto-merge after automated gates pass; protected actions (secrets, permissions, billing, destructive data changes, disabling correctness gates, major architecture changes, budget increases) escalate to the Owner.
 
 ## Research data
 
-Prefer permitted structured APIs for projections, rankings, injury/news data, and market inputs when available. Use LLM web research for qualitative context and synthesis.
+Prefer permitted structured sources for projections, values, and injuries; use web research for qualitative context. Do not scrape KeepTradeCut (its FAQ forbids it).
 
-Do not scrape KeepTradeCut; its published FAQ states that it currently has no public API/data export and forbids scraping its player values.
+## Project memory
 
-## Sleeper transport
-
-Use Sleeper's documented public HTTP API in V1. Do not depend on undocumented/reverse-engineered WebSocket endpoints. Keep ingestion transport abstract so supported streaming can be added later.
-
-## Prompt caching
-
-Keep reusable instructions/tools/context stable at the front of model input. Avoid dynamic timestamps/IDs in reusable prefixes. Measure cache-hit rates.
-
-## Project memory and meeting records
-
-Use the repository's documentation hierarchy intentionally.
-
-Always read:
-- `docs/PROJECT_STATE.md`
-- `docs/DECISIONS.md`
-
-Do **not** automatically load the full meeting archive into every task.
-
-When a task depends on a prior discussion, disagreement, rationale, preference, or unresolved question:
-1. search `docs/MEETING_NOTES.md` for the relevant date/topic;
-2. open only the linked meeting note(s) that are relevant;
-3. if a meeting decision changed canonical project behavior, prefer the current entry in `docs/DECISIONS.md` and `docs/PROJECT_STATE.md`.
-
-After a material planning/review meeting:
-- add or update a dated file under `docs/meetings/`;
-- append a short index entry to `docs/MEETING_NOTES.md`;
-- update `docs/DECISIONS.md` only for durable decisions;
-- update `docs/PROJECT_STATE.md` only when current state/architecture/priorities changed.
-
-Meeting notes are historical evidence, not automatically canonical current instructions.
+- `docs/PROJECT_STATE.md` — current state (Done / Open / Closed). Update in place.
+- `docs/DECISIONS.md` — durable decisions. Supersede, don't delete.
+- `docs/meetings/` + `docs/MEETING_NOTES.md` — dated history; read only when a task depends on past rationale. Canonical state lives in the two files above.
