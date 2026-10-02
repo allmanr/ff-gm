@@ -1,6 +1,6 @@
 # Project State
 
-**Last updated:** 2026-10-02 · **Branch:** `claude/lean-v1` ([PR #2](https://github.com/allmanr/ff-gm/pull/2))
+**Last updated:** 2026-10-02 · **Branch:** `main` (V1 merged in [PR #2](https://github.com/allmanr/ff-gm/pull/2))
 
 ## Mission
 
@@ -11,7 +11,7 @@ Expected invariants, verified live on every run: dynasty, Superflex, full PPR, T
 ## Current architecture (V1, D-015)
 
 - `bin/ff` — TypeScript CLI (Node 24 via `bin/node24`, no build step) over Sleeper's documented API. Every command validates the league and roster ownership first and fails closed (exit 1). 18 commands: context, standings, rosters, roster, picks, free-agents, trending, transactions, waivers, matchups, bench, schedule, player, values, trade, changes, history, help.
-- `scripts/gm` — runs `ff context`, writes the trusted charter to `private/AGENTS.md`, and starts Codex in `private/` with web search and sandboxed network. The validated constitution remains a separate data file; the charter treats external text as untrusted data. Default `gpt-6-sol`/high (D-010). `scripts/gm ask "…"` and `scripts/gm brief <war-room|recap|lineup|daily>` save answers to `private/reports/`.
+- `bin/ff-gm` — runs `ff context`, writes the trusted charter to `private/AGENTS.md`, and starts Codex in `private/` with web search and sandboxed network. The validated constitution remains a separate data file; the charter treats external text as untrusted data. Default `gpt-6-sol`/high (D-010). `ff-gm ask "…"` and `ff-gm brief <war-room|recap|lineup|daily>` save answers to `private/reports/`.
 - `private/` — gitignored; its own private GitHub repo `allmanr/ff-gm-private` (D-016).
 - External data (D-018): FantasyCalc market values; nflverse schedule, lines, weekly stats, and Sleeper-ID crosswalk. Supplementary: commands degrade with a note if unavailable.
 - No server, database, hosting, scheduler, or specialist subagents (D-017).
@@ -35,8 +35,8 @@ Expected invariants, verified live on every run: dynasty, Superflex, full PPR, T
 
 ## Open (impact → verdict)
 
-- **nflverse scoring coverage** — no PPG/last-3 rankings while `st_ff` and `st_fum_rec` are unavailable. The safe refusal is fixed; expanding source coverage is deferred. Use Sleeper recorded matchup points meanwhile.
-
+- **nflverse scoring coverage** — no PPG/last-3 rankings while `st_ff` and `st_fum_rec` are unavailable: the `ff free-agents` PPG/L3 columns are blank, `--sort ppg` falls back to market value, `ff player` shows no scored stat lines, and `npm run verify-scoring` exits nonzero. The safe refusal is fixed; expanding source coverage is deferred. Use Sleeper recorded matchup points meanwhile. Free-agent evaluation is the main user-facing gap → fix when a permitted source covers both keys.
+- **`ff trade` does not check sides** — it does not verify that "we give" assets are ours or that "we get" assets are not, and picks resolve by season and round only (no original team, no ownership check). The "On roster" column shows holders, so a mistake is visible; risk is a mislabeled GM trade idea → optional.
 - **Private backup push** — automatic push after GM sessions was blocked by the session permission policy. Run `git -C private push` after sessions. Data-loss risk only if this machine fails → Owner habit.
 - **Scheduled briefs + notifications** — needs a channel choice and a cron job on the Owner's machine (runs only while it is awake). → Owner decides.
 - **Plus usage** — one deep GM run used ~189k tokens. Use `FF_GM_EFFORT=medium` for routine questions; watch Codex limits in heavy weeks.
