@@ -30,14 +30,24 @@ for (const t of ctx.teams) {
 const needles = [...secrets].filter((s) => s.length >= 5);
 
 const git = (...args: string[]) => execFileSync("git", args, { cwd: paths.repoRoot, encoding: "utf8" });
-const files = new Set([...git("ls-files").split("\n"), ...git("diff", "--cached", "--name-only").split("\n")].filter(Boolean));
+// NUL delimiters preserve filenames containing tabs/newlines. Read blobs by object ID so staged
+// contents are checked even if the working copy was sanitized, removed, or renamed afterward.
+const entries = git("ls-files", "--stage", "-z").split("\0").filter(Boolean).map((entry) => {
+  const tab = entry.indexOf("\t");
+  const [, oid] = entry.slice(0, tab).split(" ");
+  return { file: entry.slice(tab + 1), oid: oid! };
+});
+const files = new Set(entries.map((entry) => entry.file));
 
 const hits: string[] = [];
+const scan = (text: string, location: string) => {
+  for (const n of needles) if (text.includes(n)) hits.push(`${location}: contains a private league identifier (${n.length} chars)`);
+};
+for (const { file, oid } of entries) scan(git("cat-file", "blob", oid), `${file} (index)`);
 for (const f of files) {
   const file = join(paths.repoRoot, f);
   if (!existsSync(file)) continue;
-  const text = readFileSync(file, "utf8");
-  for (const n of needles) if (text.includes(n)) hits.push(`${f}: contains a private league identifier (${n.length} chars)`);
+  scan(readFileSync(file, "utf8"), `${f} (working tree)`);
 }
 if (hits.length > 0) {
   console.error(`check-leaks: ${hits.length} problem(s)\n${hits.join("\n")}`);

@@ -11,16 +11,17 @@ Expected invariants, verified live on every run: dynasty, Superflex, full PPR, T
 ## Current architecture (V1, D-015)
 
 - `bin/ff` — TypeScript CLI (Node 24 via `bin/node24`, no build step) over Sleeper's documented API. Every command validates the league and roster ownership first and fails closed (exit 1). 18 commands: context, standings, rosters, roster, picks, free-agents, trending, transactions, waivers, matchups, bench, schedule, player, values, trade, changes, history, help.
-- `scripts/gm` — runs `ff context`, writes `private/AGENTS.md` (charter + constitution), and starts Codex in `private/` with web search and sandboxed network. Default `gpt-6-sol`/high (D-010). `scripts/gm ask "…"` and `scripts/gm brief <war-room|recap|lineup|daily>` save answers to `private/reports/`.
+- `scripts/gm` — runs `ff context`, writes the trusted charter to `private/AGENTS.md`, and starts Codex in `private/` with web search and sandboxed network. The validated constitution remains a separate data file; the charter treats external text as untrusted data. Default `gpt-6-sol`/high (D-010). `scripts/gm ask "…"` and `scripts/gm brief <war-room|recap|lineup|daily>` save answers to `private/reports/`.
 - `private/` — gitignored; its own private GitHub repo `allmanr/ff-gm-private` (D-016).
 - External data (D-018): FantasyCalc market values; nflverse schedule, lines, weekly stats, and Sleeper-ID crosswalk. Supplementary: commands degrade with a note if unavailable.
 - No server, database, hosting, scheduler, or specialist subagents (D-017).
 
 ## Verification status
 
-- `npm run check`: typecheck, lint, 98 offline tests on anonymized fixtures, privacy leak check. CI runs the same without secrets.
+- `npm run check`: typecheck, lint, 108 offline tests on anonymized fixtures, privacy leak check of both Git index blobs and working files. CI runs the same without secrets.
 - Live, 2026-10-02: every command against the league; exact scoring engine matches Sleeper's `players_points` 749/749 (`npm run verify-scoring`); lineup optimizer matches Sleeper's max PF for every roster checked.
 - Two independent code reviews (19 findings). All "fix" verdicts fixed with regression tests that fail when the fix is reverted.
+- PR #2 follow-up: regression tests reproduce all three reported failures against the original code in a temporary checkout, and pass with the fixes. Launcher tests verify instruction/data separation; model obedience was not tested. Live scoring rerun: 749/749 comparable player-week scores match; `st_ff` and `st_fum_rec` remain absent from the stat source.
 
 ## Done
 
@@ -28,6 +29,7 @@ Expected invariants, verified live on every run: dynasty, Superflex, full PPR, T
 - `ff` CLI with fail-closed gate; GM charter, launcher, and briefs; anonymized fixtures; CI; leak check.
 - GM acceptance run (Sol/high, ~189k tokens, 38 web searches) answered lineup, waiver, and trade questions from the Owner's actual roster.
 - Review fixes: null-matchup pairing, renewed-league fail-closed, stale-data notices, offseason (week-1) transactions, multi-position players (`fantasy_positions`), FantasyCalc one-request-per-hour on failures, and others.
+- PR #2 fixes: Sleeper names stay out of GM instruction files; leak checks scan staged blobs even after working-copy sanitization/removal; FantasyCalc attempt reservations use an atomic cross-process lock and recheck the hourly limit before fetching. Two-process tests cover both successful and failed refreshes.
 - Private data repo created and first push made.
 
 ## Open (impact → verdict)

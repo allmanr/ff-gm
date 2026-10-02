@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, renameSync, statSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, renameSync, rmdirSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { z } from "zod";
 import type { LeagueContext } from "./context.ts";
@@ -76,6 +76,7 @@ export async function loadValueBook(opts: LoadOptions): Promise<ValueBook> {
   });
   const file = join(opts.cacheDir, `fantasycalc-values-${query.toString().replace(/[^a-z0-9=]+/gi, "_")}.json`);
   const attemptFile = `${file}.attempt`;
+  const lockDir = `${attemptFile}.lock`;
   const ageOf = (f: string) => {
     try {
       return now() - statSync(f).mtimeMs;
@@ -95,21 +96,40 @@ export async function loadValueBook(opts: LoadOptions): Promise<ValueBook> {
   let rows: MarketValue[] | null = ageMs < Math.max(MIN_REFRESH_MS, opts.maxAgeMs ?? DEFAULT_MAX_AGE_MS) ? readCache() : null;
   let stale = false;
   if (!rows) {
+    // Reserve the attempt under an atomic cross-process lock. No await occurs while held: once
+    // the marker is persisted, other commands can safely use it while this request is in flight.
+    mkdirSync(opts.cacheDir, { recursive: true });
+    let locked = false;
+    let reserved = false;
+    try {
+      try {
+        mkdirSync(lockDir);
+        locked = true;
+      } catch (err) {
+        if ((err as NodeJS.ErrnoException).code !== "EEXIST") throw err;
+      }
+      if (locked && ageOf(attemptFile) >= MIN_REFRESH_MS) {
+        writeFileSync(attemptFile, `${new Date(now()).toISOString()}\n`);
+        reserved = true;
+      }
+    } finally {
+      if (locked) rmdirSync(lockDir);
+    }
     // FantasyCalc allows at most one refresh per hour. Every attempt, failed or not, starts that
     // clock, so a failing refresh is not retried on each command.
     const sinceAttempt = ageOf(attemptFile);
-    if (sinceAttempt < MIN_REFRESH_MS) {
+    if (!reserved) {
       rows = readCache();
       if (!rows) {
+        if (!locked) throw new Error("FantasyCalc request reservation is locked; no usable cache (its terms allow one request per hour)");
         throw new Error(
           `FantasyCalc was last requested ${Math.round(sinceAttempt / 60_000)} min ago without a usable result; ` +
             "its terms allow one request per hour",
         );
       }
-      stale = true;
+      ageMs = ageOf(file);
+      stale = ageMs >= Math.max(MIN_REFRESH_MS, opts.maxAgeMs ?? DEFAULT_MAX_AGE_MS);
     } else {
-      mkdirSync(opts.cacheDir, { recursive: true });
-      writeFileSync(attemptFile, `${new Date(now()).toISOString()}\n`);
       try {
         const doFetch = opts.fetch ?? ((url, init) => fetch(url, init));
         const res = await doFetch(`${BASE}/values/current?${query}`, { signal: AbortSignal.timeout(15_000) });
@@ -122,6 +142,7 @@ export async function loadValueBook(opts: LoadOptions): Promise<ValueBook> {
       } catch (err) {
         rows = readCache();
         if (!rows) throw err;
+        ageMs = ageOf(file);
         stale = true;
       }
     }
@@ -140,7 +161,7 @@ export async function loadValueBook(opts: LoadOptions): Promise<ValueBook> {
   const fetchedAtMs = now() - ageMs;
   const label =
     `${FANTASYCALC_ATTRIBUTION} — dynasty, ${format.numQbs === "2" ? "Superflex/2QB" : "1QB"}, ${format.numTeams} teams, ` +
-    `PPR ${format.ppr}, TE ${format.tep}; as of ${new Date(fetchedAtMs).toISOString()}${stale ? " (STALE: refresh failed)" : ""}.` +
+    `PPR ${format.ppr}, TE ${format.tep}; as of ${new Date(fetchedAtMs).toISOString()}${stale ? " (STALE: refresh unavailable)" : ""}.` +
     (notes.length ? ` ${notes.join(" ")}` : "");
   return { byPlayer, picks, fetchedAtMs, stale, label };
 }

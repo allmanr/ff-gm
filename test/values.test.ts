@@ -1,6 +1,8 @@
-import { mkdtempSync, utimesSync, readdirSync } from "node:fs";
+import { spawn } from "node:child_process";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, readdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { describe, expect, it, vi } from "vitest";
 import { createSession } from "../src/session.ts";
 import { createSleeperClient } from "../src/sleeper/client.ts";
@@ -64,6 +66,87 @@ describe("FantasyCalc format", () => {
 });
 
 describe("value cache", () => {
+  it.each([false, true])("reserves only one attempt across processes after cache expiry (failure=%s)", async (failure) => {
+    const { ctx } = await fixtureSession().session.data();
+    const cacheDir = mkdtempSync(join(tmpdir(), "ff-values-concurrent-"));
+    try {
+      await loadValueBook({ ctx, cacheDir, fetch: async () => Response.json(syntheticValues()) });
+      const file = join(cacheDir, readdirSync(cacheDir).find((f) => f.endsWith(".json"))!);
+      const old = (Date.now() - 7 * 3600_000) / 1000;
+      utimesSync(file, old, old);
+      utimesSync(`${file}.attempt`, old, old);
+      writeFileSync(join(cacheDir, "input.json"), JSON.stringify({ ctx, rows: syntheticValues() }));
+      const moduleUrl = pathToFileURL(join(import.meta.dirname, "../src/values.ts")).href;
+      const worker = (id: number) => {
+        const code = `
+          import fs from "node:fs";
+          import { syncBuiltinESMExports } from "node:module";
+          import { setTimeout } from "node:timers/promises";
+          const cacheDir = ${JSON.stringify(cacheDir)};
+          const input = JSON.parse(fs.readFileSync(cacheDir + "/input.json", "utf8"));
+          const write = fs.writeFileSync;
+          // Widen the reported check/write race deterministically without any network calls.
+          fs.writeFileSync = (file, ...args) => {
+            if (String(file).endsWith(".attempt")) Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 250);
+            return write(file, ...args);
+          };
+          syncBuiltinESMExports();
+          const { loadValueBook } = await import(${JSON.stringify(moduleUrl)});
+          fs.writeFileSync(cacheDir + "/ready-${id}", "ready");
+          while (!fs.existsSync(cacheDir + "/go")) await setTimeout(10);
+          const book = await loadValueBook({
+            ctx: input.ctx, cacheDir,
+            fetch: async () => {
+              fs.appendFileSync(cacheDir + "/requests", "request\\n");
+              return ${failure ? 'new Response("down", { status: 503 })' : 'Response.json(input.rows)'};
+            }
+          });
+          console.log(JSON.stringify({ stale: book.stale, fetchedAtMs: book.fetchedAtMs }));
+        `;
+        const child = spawn(process.execPath, ["--input-type=module", "--eval", code], { stdio: ["ignore", "pipe", "pipe"] });
+        let stderr = "";
+        child.stderr.on("data", (chunk) => { stderr += String(chunk); });
+        const done = new Promise<void>((resolve, reject) => {
+          child.on("error", reject);
+          child.on("close", (status) => status === 0 ? resolve() : reject(new Error(stderr)));
+        });
+        return { child, done };
+      };
+      const workers = [worker(1), worker(2)];
+      try {
+        await vi.waitFor(() => {
+          expect(existsSync(join(cacheDir, "ready-1"))).toBe(true);
+          expect(existsSync(join(cacheDir, "ready-2"))).toBe(true);
+        }, { timeout: 3000 });
+        writeFileSync(join(cacheDir, "go"), "go");
+        await Promise.all(workers.map((w) => w.done));
+        expect(readFileSync(join(cacheDir, "requests"), "utf8").trim().split("\n")).toHaveLength(1);
+        const retry = vi.fn(async () => Response.json(syntheticValues()));
+        await loadValueBook({ ctx, cacheDir, fetch: retry });
+        expect(retry).not.toHaveBeenCalled();
+        expect(existsSync(`${file}.attempt.lock`)).toBe(false);
+      } finally {
+        workers.forEach((w) => w.child.kill());
+        await Promise.allSettled(workers.map((w) => w.done));
+      }
+    } finally {
+      rmSync(cacheDir, { recursive: true, force: true });
+    }
+  });
+
+  it("does not fetch when another process holds the reservation lock and no cache exists", async () => {
+    const { ctx } = await fixtureSession().session.data();
+    const cacheDir = mkdtempSync(join(tmpdir(), "ff-values-"));
+    const failing = vi.fn(async () => new Response("down", { status: 503 }));
+    await expect(loadValueBook({ ctx, cacheDir, fetch: failing })).rejects.toThrow(/503/);
+    const attempt = readdirSync(cacheDir).find((f) => f.endsWith(".attempt"))!;
+    rmSync(join(cacheDir, attempt));
+    mkdirSync(join(cacheDir, `${attempt}.lock`));
+    const fetch = vi.fn(async () => Response.json(syntheticValues()));
+    await expect(loadValueBook({ ctx, cacheDir, fetch })).rejects.toThrow(/reservation is locked/);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   it("never refetches within an hour, even when asked for fresher data", async () => {
     const { session } = fixtureSession();
     const { ctx } = await session.data();
