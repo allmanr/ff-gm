@@ -80,4 +80,9 @@ describe("stat book", () => {
     expect(ppg(games, 1)).toBe(27);
     expect(book.label).toMatch(/nflverse \(CC-BY-4.0/);
   });
+
+  it("refuses to score when the league has an unrecognized scoring key", async () => {
+    const ctx = await ctxWith((l) => (l.scoring_settings.mystery_bonus = 2));
+    expect(() => buildStatBook({ ctx, db: new Map(), statsCsv: STATS, rostersCsv: ROSTERS })).toThrow(/mystery_bonus/);
+  });
 });

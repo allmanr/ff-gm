@@ -59,6 +59,10 @@ export function buildStatBook(args: {
   rostersCsv: string;
   stale?: boolean;
 }): StatBook {
+  // Unrecognized scoring keys make league-scored points unknowable: refuse rather than assume 0.
+  if (args.ctx.unresolvedScoringKeys.length > 0) {
+    throw new Error(`league has unrecognized scoring keys (${args.ctx.unresolvedScoringKeys.join(", ")}); cannot score stats exactly`);
+  }
   const toSleeper = new Map<string, string>();
   for (const r of rowsOf(args.rostersCsv)) {
     if (r.gsis_id && r.gsis_id !== "NA" && r.sleeper_id && r.sleeper_id !== "NA") toSleeper.set(r.gsis_id, r.sleeper_id);

@@ -44,9 +44,9 @@ const HELP = `ff — validated Sleeper league data for the GM. Every command ver
 
   --refresh-players  re-download Sleeper's player database (normally at most daily)
 
-Exit codes: 0 ok · 1 league validation failed (no football output) · 2 usage · 3 Sleeper/network error`;
+Exit codes: 0 ok · 1 league validation failed (no football output) · 2 usage · 3 Sleeper/network error · 4 other error`;
 
-export const EXIT = { ok: 0, invalidContext: 1, usage: 2, upstream: 3 } as const;
+export const EXIT = { ok: 0, invalidContext: 1, usage: 2, upstream: 3, other: 4 } as const;
 
 function parseOptions(argv: string[]) {
   const { values, positionals } = parseArgs({
@@ -177,7 +177,9 @@ async function main(): Promise<number> {
       process.stderr.write(`${err.message}${err.cause ? ` (${String(err.cause)})` : ""}\n`);
       return EXIT.upstream;
     }
-    throw err;
+    // Anything else (nflverse outage, malformed private file, bug) must not exit 1, which means validation failed.
+    process.stderr.write(`${err instanceof Error ? (err.stack ?? err.message) : String(err)}\n`);
+    return EXIT.other;
   }
 }
 
