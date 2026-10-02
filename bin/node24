@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Run node >= 24 (native TypeScript), falling back to the newest nvm-installed version when the
+# shell's default node is older. Usage: bin/node24 <script> [args...]
+set -euo pipefail
+
+node_bin="$(command -v node || true)"
+major() { "$1" -p 'process.versions.node.split(".")[0]' 2>/dev/null || echo 0; }
+if [[ -z "$node_bin" || "$(major "$node_bin")" -lt 24 ]]; then
+  node_bin=""
+  for candidate in $(ls -d "${NVM_DIR:-$HOME/.nvm}"/versions/node/v*/bin/node 2>/dev/null | sort -V -r); do
+    if [[ "$(major "$candidate")" -ge 24 ]]; then node_bin="$candidate"; break; fi
+  done
+  if [[ -z "$node_bin" ]]; then
+    echo "Node 24 or newer is required (see .nvmrc)." >&2
+    exit 2
+  fi
+fi
+
+exec "$node_bin" --disable-warning=ExperimentalWarning "$@"

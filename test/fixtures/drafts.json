@@ -1,0 +1,30 @@
+[
+ {
+  "draft_id": "1314802188064657408",
+  "season": "2026",
+  "status": "complete",
+  "type": "linear",
+  "settings": {
+   "rounds": 4,
+   "alpha_sort": 0,
+   "autopause_enabled": 1,
+   "autopause_end_time": 660,
+   "autopause_start_time": 300,
+   "autostart": 1,
+   "cpu_autopick": 1,
+   "enforce_position_limits": 1,
+   "nomination_timer": 60,
+   "pick_timer": 43200,
+   "player_type": 1,
+   "reversal_round": 0,
+   "slots_bn": 19,
+   "slots_flex": 2,
+   "slots_qb": 1,
+   "slots_rb": 2,
+   "slots_super_flex": 1,
+   "slots_te": 1,
+   "slots_wr": 2,
+   "teams": 12
+  }
+ }
+]

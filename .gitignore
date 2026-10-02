@@ -1,0 +1,17 @@
+# Local credentials; keep the documented example template.
+.env
+.env.*
+!.env.example
+
+# Dependencies and generated outputs.
+node_modules/
+.next/
+coverage/
+*.tsbuildinfo
+.vercel/
+
+# Private local data, reports, and diagnostic artifacts.
+.local/
+
+# Owner identity, strategy, manager profiles, recommendation history.
+private/
