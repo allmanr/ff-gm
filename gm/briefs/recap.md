@@ -1,6 +1,6 @@
 Weekly recap, after Monday Night Football.
 
-1. Run `ff matchups --week <the week just finished>`, `ff roster`, `ff standings`, and `ff changes`.
+1. Run `ff matchups --week <the week just finished>`, `ff roster`, `ff standings`, and `ff transactions --week <that week>`. (Use `ff changes --no-write` if you also want changes since the last session without resetting its baseline.)
 2. Our result and why: which slots decided it, and `ff bench --week <week>` for points left on the bench and whether the best lineup would have changed the result.
 3. Standings and playoff picture: where we sit, the race for playoff spots and byes, and the schedule ahead if relevant.
 4. League moves this week and what they say about each manager. Update notes/managers.md with dated facts.

@@ -1,45 +1,46 @@
 # Implementation plan
 
-**Updated:** 2026-10-02 · **Status:** Phases 1–2 done; Phase 3 items 1–3 done (values, changes, history) · **Decision:** [D-015](DECISIONS.md) · **Target architecture (later):** [IMPLEMENTATION_SPEC.md](IMPLEMENTATION_SPEC.md)
+**Updated:** 2026-10-02 · **Status:** Phases 1–3 built and verified (PR #2) · **Decisions:** [D-015](DECISIONS.md), [D-018](DECISIONS.md) · **Target architecture (later):** [IMPLEMENTATION_SPEC.md](IMPLEMENTATION_SPEC.md)
 
 Build the smallest thing that gives the Owner validated football advice this season. Add the next piece only when its absence is felt in real use.
 
-## Phase 1 — `ff` CLI (validated league data)
+## Phase 1 — `ff` CLI (done)
 
-Commands, each of which validates the league before printing anything:
+Every command validates the league and roster ownership before printing anything (exit 1 on failure). Run `bin/ff help` for options.
 
 | Command | Output |
 |---|---|
-| `ff context` | Fetch league/users/rosters, verify the four invariants, write `private/LEAGUE_CONSTITUTION.md` and `private/context.json`; exit 1 on failure |
-| `ff standings` | Records, points for/against, divisions |
-| `ff rosters` | Every team: manager, record, positional counts, QB depth (Superflex scarcity), age |
-| `ff roster [me\|roster_id\|username]` | Players with slot, position, team, age, injury, weekly and season points |
-| `ff free-agents [--pos]` | Unrostered QB/RB/WR/TE ranked by Sleeper's search rank, with trend and injury |
-| `ff trending [--type add\|drop]` | Sleeper trending players with league availability |
-| `ff transactions [--week]` | Trades (players, picks, FAAB), waivers with bids, adds/drops |
-| `ff picks [team]` | Future pick ownership derived from defaults plus traded picks |
-| `ff matchups [--week]` | Scores and the Owner's matchup |
-| `ff player <name\|id>` | Player detail, rostering team, weekly points |
+| `ff context` | Validate; write `private/LEAGUE_CONSTITUTION.md` and `private/context.json` |
+| `ff standings`, `ff rosters` | Records and divisions; every team's QB depth, positional counts, ages, 1sts |
+| `ff roster [team]` | Slots, byes, weekly league points, market value, FAAB left, future picks |
+| `ff picks [team]` | Future pick ownership (defaults plus traded picks) |
+| `ff free-agents [--pos] [--sort ppg]` | Unrostered startable players with value, depth, trends, and league-scored PPG |
+| `ff trending`, `ff transactions`, `ff waivers` | Market heat; league moves; observed waiver run times, FAAB left, winning bids |
+| `ff matchups`, `ff bench`, `ff schedule` | Scores and head-to-head; hindsight best lineup; games, byes, kickoffs, implied totals |
+| `ff player <name\|id>` | Detail, ownership, league points, scored stat lines for any player |
+| `ff values [team\|--league]`, `ff trade "<give>" "<get>"` | FantasyCalc market values; trade market check |
+| `ff changes`, `ff history [manager]` | League Watcher diff since last run; trades across seasons with tendencies |
 
-**Done:** `npm run check` passes on anonymized fixtures (no network), and every command runs against the live league.
+## Phase 2 — GM v0 (done)
 
-## Phase 2 — GM v0
+- `gm/CHARTER.md`: role, ground rules (facts only from `ff`, fail closed, off-limits sources), tools, decision lenses, recurring work, memory files, output style.
+- `scripts/gm`: validates, assembles `private/AGENTS.md`, starts Codex in `private/`. `ask "…"` for one turn; `brief <name>` for the routines in `gm/briefs/`.
 
-- `gm/CHARTER.md`: GM role, decision checklist (market vs. football vs. roster value, Superflex QB scarcity, TE bonus, picks, FAAB), reporting style, and the rule that every claim about this league comes from `ff`.
-- `scripts/gm`: runs `ff context` (fails closed), assembles `private/AGENTS.md` from the charter plus the constitution, then starts Codex in `private/` with web search and network access for `ff`. `scripts/gm ask "question"` runs one non-interactive turn and saves the answer under `private/reports/`.
+## Phase 3 — added after real gaps (done)
 
-**Done:** the GM answers "who do I start this week and what waiver claims should I make?" from the Owner's actual roster and scoring.
+League Watcher (`ff changes`), league history, FantasyCalc values, NFL schedule and lines, observed waiver timing, exact league scoring of nflverse stats (verified 749/749 against Sleeper), lineup optimizer (matches Sleeper max PF).
 
-## Phase 3 — when it's missed (in rough order)
+## Next — only when real use shows the need
 
-1. ~~`ff changes`~~ — done: deterministic League Watcher with snapshots in `private/snapshots/`.
-2. ~~League history~~ — done: `ff history` across `previous_league_id` seasons with per-manager tendencies.
-3. ~~Dynasty market values~~ — done: FantasyCalc via `ff values` / `ff trade`. Still open: a projection source and an exact-scoring engine with TE-bonus tests (see PROJECT_STATE).
-4. A scheduled Tuesday war-room run (`codex exec` from cron) with a push notification — needs the Owner's channel choice.
-5. A phone surface, hosting, and the SRE agent (D-017).
+1. Owner uses the GM weekly (`scripts/gm brief war-room` on Tuesdays, `lineup` before kickoffs). Note what it gets wrong in `private/notes/`.
+2. Scheduled briefs with a notification channel, once the Owner picks one.
+3. Forward projections, if the GM's research proves insufficient (PROJECT_STATE lists the options).
+4. Optional review findings listed in PROJECT_STATE.
+5. Phone surface, hosting, and the SRE agent (D-017) — not before the above.
 
 ## Working rules
 
-- Any coding agent may build this; keep one agent per branch at a time.
-- `private/` never enters the public repository (D-016).
+- Any coding agent may build this; keep one agent per branch at a time. `npm run check` before every commit.
+- `private/` and anything identifying the Owner, league-mates, or strategy never enter the public repository (D-016; `npm run check-leaks` catches names and IDs, not strategy).
+- New external data needs a D-018-style terms check first.
 - Record new durable choices in DECISIONS and current status in PROJECT_STATE.

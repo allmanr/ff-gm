@@ -23,3 +23,11 @@
 
 - Planning in one model and implementing in another for a codebase this small: the plan would cost nearly as much as the build and lose context in the handoff.
 - A team of specialist subagents for V1: on a subscription, every subagent call draws from the same usage limit.
+
+## Outcome (same day)
+
+- Built and verified V1 in one session ([PR #2](https://github.com/allmanr/ff-gm/pull/2)): the `ff` CLI (18 commands), GM charter, launcher, and briefs, plus anonymized fixtures, CI, and a privacy leak check.
+- Verification against ground truth: the exact scoring engine reproduces Sleeper's `players_points` 749/749; the lineup optimizer reproduces Sleeper's max PF; the GM acceptance run answered lineup, waiver, and trade questions from the actual roster.
+- Two independent subagent code reviews found 19 issues; every "fix" verdict was fixed with a regression test that fails when the fix is reverted. Five low-impact optional findings remain in PROJECT_STATE.
+- Data-source research and primary-source checks produced D-018 (FantasyCalc and nflverse permitted; RotoWire and KeepTradeCut off-limits). The first GM run cited RotoWire; the citation was replaced and the charter now forbids it.
+- Process lessons: a public repository needs an automated leak check (one real manager name and one GM trade idea nearly reached public docs; the Owner squashed history before pushing). Automatic pushing of private data was blocked by the session's permission policy and is left to the Owner.

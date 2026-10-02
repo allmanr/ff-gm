@@ -179,3 +179,18 @@ Historical discussion belongs in `docs/meetings/`. Technical detail may live in 
 **Rationale:** With no hosted service there is little to monitor or repair; the Owner opens a coding agent when a tool breaks. Each deferred component adds operating cost before it adds football value.
 
 **Status:** active
+
+---
+
+## D-018 — 2026-10-02 — Permitted external data sources
+
+**Decision:** Besides Sleeper's documented API, V1 uses only sources whose terms permit this use, each attributed next to its data:
+
+- **FantasyCalc** `GET /values/current` for dynasty market values — documented endpoint only, at most one request per hour (failed attempts count), non-commercial, "FantasyCalc.com" attribution.
+- **nflverse** release files (CC-BY-4.0) for the NFL schedule and closing lines, weekly player stats, and the roster file that maps nflverse player IDs to Sleeper IDs.
+
+Off-limits: KeepTradeCut (scraping forbidden), RotoWire (terms effective 2026-09-19 prohibit use with AI tools, including storing its data), Dynasty Daddy (built on KTC scraping), DynastyProcess values (derived from scraped FantasyPros data). The GM charter repeats the off-limits list.
+
+**Rationale:** The project is public and run by AI agents; using data against its terms is a real risk. Verified from the providers' own docs and terms on 2026-10-02.
+
+**Status:** active

@@ -28,10 +28,12 @@ Create `private/owner.json` with your league and Sleeper roster (look up your `u
 ```bash
 bin/ff help
 bin/ff context           # validate and write private/LEAGUE_CONSTITUTION.md
-bin/ff roster            # your roster: weekly league points, market value, FAAB left, picks
+bin/ff roster            # your roster: byes, weekly league points, market value, FAAB left, picks
 bin/ff schedule          # this week's games, byes, kickoffs (CT), Vegas implied totals, your players' games
 bin/ff changes           # what changed in the league since the last run
-bin/ff free-agents --pos TE
+bin/ff free-agents --pos TE --sort ppg   # waiver wire with league-scored points per game
+bin/ff waivers           # when waivers actually run, FAAB left per team, winning bids
+bin/ff bench --week 3    # hindsight: actual lineup vs best possible
 bin/ff values --league   # dynasty market value by team (FantasyCalc)
 bin/ff trade "Player A, 2027 R2" "Player B"
 bin/ff history <manager>
@@ -43,7 +45,9 @@ scripts/gm brief war-room                        # Tuesday prep (also: recap, li
 
 The GM defaults to `gpt-6-sol` with high reasoning; set `FF_GM_MODEL` / `FF_GM_EFFORT` to change it (e.g. `FF_GM_EFFORT=medium` for routine questions; one deep run can use ~190k tokens). Briefs live in `gm/briefs/`.
 
-Data sources: Sleeper's documented API (league facts), FantasyCalc.com (dynasty market values; non-commercial, attributed), and nflverse (schedule and lines; CC-BY-4.0). RotoWire and KeepTradeCut are off-limits by their terms.
+Data sources ([D-018](docs/DECISIONS.md)): Sleeper's documented API (league facts), FantasyCalc.com (dynasty market values; non-commercial, attributed, at most one request per hour), and nflverse (schedule, lines, weekly stats; CC-BY-4.0). RotoWire and KeepTradeCut are off-limits by their terms.
+
+Developer scripts: `npm run check` (typecheck, lint, tests, leak check), `npm run verify-scoring` (live: engine vs Sleeper's points), `npm run record-fixtures` (re-record anonymized fixtures). All run through `bin/node24`, so an older default Node is fine if Node 24 is installed via nvm.
 
 To back up GM notes: `git -C private add -A && git -C private commit -m notes && git -C private push`.
 

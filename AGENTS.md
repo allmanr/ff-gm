@@ -28,6 +28,9 @@ Enforcement is mechanical, not a prompt: every `ff` data command validates the l
 - `matchups[].players_points` are points under this league's exact scoring — prefer them over recomputing actuals.
 - League IDs are per season; history lives behind `previous_league_id`.
 - The documented API is read-only. The GM advises; the Owner acts in Sleeper.
+- `position` is the primary position only; `fantasy_positions` lists every position a player can fill (Travis Hunter: DB, eligible at WR; fullbacks: FB, eligible at RB). Use `src/positions.ts` for eligibility.
+- Offseason and preseason transactions are filed under week 1; use `session.transactionWeeks()` when reading transactions.
+- `matchup_id` is null for teams without a game; never pair two nulls.
 - `/players/nfl` is ~5 MB; fetch at most once per day (cached under `.local/cache/`).
 - Use only the documented HTTP API at docs.sleeper.com. No undocumented endpoints or WebSockets.
 
@@ -39,19 +42,19 @@ Enforcement is mechanical, not a prompt: every `ff` data command validates the l
 
 ## Engineering rules
 
-- TypeScript strict, Node 24 (native type stripping; no build step). Zod for every Sleeper payload. Vitest for tests.
+- TypeScript strict, Node 24 (native type stripping; no build step; `bin/node24` finds it). Zod for every external payload. Vitest for tests.
 - Deterministic code for fetching, diffing, math, and validation; the LLM handles judgment and communication.
 - Tests must not hit the network. Add a test for every bug fixed.
 - Keep it boring: no server, database, queue, or framework until a concrete need is recorded in `docs/PROJECT_STATE.md`.
-- Commit on a feature branch with coherent messages. `npm run check` (typecheck + lint + tests) must pass before commit.
+- Commit on a feature branch with coherent messages. `npm run check` (typecheck, lint, tests, leak check) must pass before commit. After scoring or data-source changes, run `npm run verify-scoring` (live; engine vs Sleeper's points must match).
 
 ## Deferred, not rejected
 
 The autonomous Software Dev/SRE agent (D-008), AI Guru, Rookie Scout, hosted deployment, and scheduled jobs are deferred until V1 is in regular use. When the SRE agent is built, D-008's policy applies: low-risk repairs may auto-merge after automated gates pass; protected actions (secrets, permissions, billing, destructive data changes, disabling correctness gates, major architecture changes, budget increases) escalate to the Owner.
 
-## Research data
+## External data (D-018)
 
-Prefer permitted structured sources for projections, values, and injuries; use web research for qualitative context. Do not scrape KeepTradeCut (its FAQ forbids it).
+Only sources whose terms permit this use, with attribution next to the data: Sleeper's documented API, FantasyCalc `/values/current` (at most one request per hour, failed attempts included; non-commercial), and nflverse release files (CC-BY-4.0). External data is supplementary: commands keep working with a visible note if it is unavailable. KeepTradeCut, RotoWire, Dynasty Daddy, and DynastyProcess values are off-limits. Check terms and record a decision before adding any source.
 
 ## Project memory
 
