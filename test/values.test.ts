@@ -1,4 +1,4 @@
-import { mkdtempSync, utimesSync, writeFileSync, readdirSync } from "node:fs";
+import { mkdtempSync, utimesSync, readdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
@@ -79,9 +79,10 @@ describe("value cache", () => {
     const { ctx } = await session.data();
     const cacheDir = mkdtempSync(join(tmpdir(), "ff-values-"));
     await loadValueBook({ ctx, cacheDir, fetch: async () => Response.json(syntheticValues()) });
-    const file = join(cacheDir, readdirSync(cacheDir)[0]!);
+    const file = join(cacheDir, readdirSync(cacheDir).find((f) => f.endsWith(".json"))!);
     const old = (Date.now() - 7 * 3600_000) / 1000;
-    utimesSync(file, old, old);
+    utimesSync(file, old, old); // simulate seven hours passing since the last fetch
+    utimesSync(`${file}.attempt`, old, old);
     const failing = vi.fn(async () => new Response("down", { status: 503 }));
     const book = await loadValueBook({ ctx, cacheDir, fetch: failing });
     expect(failing).toHaveBeenCalledTimes(1);
@@ -94,8 +95,32 @@ describe("value cache", () => {
     const { ctx } = await session.data();
     const cacheDir = mkdtempSync(join(tmpdir(), "ff-values-"));
     await expect(loadValueBook({ ctx, cacheDir, fetch: async () => Response.json([{ nope: 1 }]) })).rejects.toThrow();
-    expect(readdirSync(cacheDir)).toEqual([]);
-    writeFileSync(join(cacheDir, "unrelated"), "x");
+    expect(readdirSync(cacheDir).filter((f) => f.endsWith(".json"))).toEqual([]);
+  });
+
+  it("does not retry a failed refresh within the hour (FantasyCalc's limit)", async () => {
+    const { session } = fixtureSession();
+    const { ctx } = await session.data();
+    const cacheDir = mkdtempSync(join(tmpdir(), "ff-values-"));
+    await loadValueBook({ ctx, cacheDir, fetch: async () => Response.json(syntheticValues()) });
+    const file = join(cacheDir, readdirSync(cacheDir).find((f) => f.endsWith(".json"))!);
+    const old = (Date.now() - 7 * 3600_000) / 1000;
+    utimesSync(file, old, old);
+    utimesSync(`${file}.attempt`, old, old);
+    const failing = vi.fn(async () => new Response("busy", { status: 429 }));
+    expect((await loadValueBook({ ctx, cacheDir, fetch: failing })).stale).toBe(true);
+    expect((await loadValueBook({ ctx, cacheDir, fetch: failing })).stale).toBe(true);
+    expect(failing).toHaveBeenCalledTimes(1);
+  });
+
+  it("with no cache, fails without refetching until the hour has passed", async () => {
+    const { session } = fixtureSession();
+    const { ctx } = await session.data();
+    const cacheDir = mkdtempSync(join(tmpdir(), "ff-values-"));
+    const failing = vi.fn(async () => new Response("down", { status: 503 }));
+    await expect(loadValueBook({ ctx, cacheDir, fetch: failing })).rejects.toThrow(/503/);
+    await expect(loadValueBook({ ctx, cacheDir, fetch: failing })).rejects.toThrow(/one request per hour/);
+    expect(failing).toHaveBeenCalledTimes(1);
   });
 });
 

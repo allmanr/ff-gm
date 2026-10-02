@@ -51,7 +51,7 @@ function tallyTrades(ctx: LeagueContext, trades: Transaction[], byManager: Map<s
 export async function historyCommand(session: Session, who: string | undefined, opts: Options): Promise<string> {
   const { ctx } = await session.data();
   const [db, past] = await Promise.all([session.players(), session.history()]);
-  const weeks = await session.playedWeeks();
+  const weeks = await session.transactionWeeks();
   const currentTrades = (await Promise.all(weeks.map((w) => session.transactions(w))))
     .flat()
     .filter((t) => t.type === "trade" && t.status === "complete");

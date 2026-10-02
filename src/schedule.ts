@@ -5,6 +5,7 @@ import type { Options } from "./commands.ts";
 import { header, table } from "./format.ts";
 import { playerName } from "./players.ts";
 import type { Session } from "./session.ts";
+import { fantasyPosition, isStartable } from "./positions.ts";
 
 /** nflverse schedules release (CC-BY-4.0): kickoffs, results, closing spreads and totals. */
 export const SCHEDULE_URL = "https://github.com/nflverse/nflverse-data/releases/download/schedules/games.csv";
@@ -208,7 +209,7 @@ export async function scheduleCommand(session: Session, opts: Options): Promise<
     const mine = r.players
       .filter((id) => !r.reserve.includes(id))
       .map((id) => ({ id, p: db.get(id) }))
-      .filter(({ p }) => p && ctx.roster.startablePositions.includes(p.position ?? ""))
+      .filter(({ p }) => isStartable(p, ctx.roster.startablePositions))
       .map(({ id, p }) => {
         const nflTeam = p!.team ?? "";
         const g = nflTeam ? gameFor(nflTeam) : undefined;
@@ -219,7 +220,7 @@ export async function scheduleCommand(session: Session, opts: Options): Promise<
           row: [
             starters.has(id) ? "start" : "bench",
             playerName(db, id),
-            `${p!.position}-${nflTeam || "FA"}`,
+            `${fantasyPosition(p, ctx.roster.startablePositions)}-${nflTeam || "FA"}`,
             p!.injury_status ?? "",
             !nflTeam ? "no team" : !g ? "BYE" : `${home ? "vs" : "@"} ${home ? g.away : g.home}`,
             g ? kickoffCt(g) : "",

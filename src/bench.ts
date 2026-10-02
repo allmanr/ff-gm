@@ -5,6 +5,7 @@ import { optimalLineup } from "./lineup.ts";
 import { playerLabel } from "./players.ts";
 import type { Session } from "./session.ts";
 import type { Matchup } from "./sleeper/schemas.ts";
+import { eligiblePositions } from "./positions.ts";
 
 /**
  * Hindsight lineup review: actual starters vs. the best legal lineup from the same roster that
@@ -45,8 +46,8 @@ export async function benchCommand(session: Session, who: string | undefined, op
     mine.matchup_id != null ? ms.find((m) => m.matchup_id === mine.matchup_id && m.roster_id !== mine.roster_id) : undefined;
 
   const candidates = mine.players
-    .map((id) => ({ id, position: db.get(id)?.position ?? "", points: mine.players_points[id] ?? 0 }))
-    .filter((c) => c.position);
+    .map((id) => ({ id, positions: eligiblePositions(db.get(id)), points: mine.players_points[id] ?? 0 }))
+    .filter((c) => c.positions.length > 0);
   const best = optimalLineup(ctx.roster.starterSlots, candidates);
   const actualTotal = mine.starters_points.reduce((a, b) => a + b, 0);
   const rows = ctx.roster.starterSlots.map((s, i) => {

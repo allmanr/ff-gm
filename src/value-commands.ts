@@ -5,6 +5,7 @@ import { playerName, type PlayerDb } from "./players.ts";
 import type { LeagueData, Session } from "./session.ts";
 import type { Roster } from "./sleeper/schemas.ts";
 import { pickKey, type ValueBook } from "./values.ts";
+import { fantasyPosition, isStartable } from "./positions.ts";
 
 async function requireValues(session: Session): Promise<ValueBook> {
   const { book, note } = await optionalValues(session);
@@ -22,12 +23,14 @@ async function ownedPicks(session: Session, data: LeagueData) {
   });
 }
 
-function rosterValue(r: Roster, db: PlayerDb, book: ValueBook) {
+function rosterValue(r: Roster, db: PlayerDb, book: ValueBook, startable: readonly string[]) {
   const byPos: Record<string, number> = { QB: 0, RB: 0, WR: 0, TE: 0 };
   let unvalued = 0;
   for (const id of rosterPlayerIds(r)) {
-    const v = book.byPlayer.get(id)?.value;
-    const pos = db.get(id)?.position ?? "";
+    const mv = book.byPlayer.get(id);
+    const v = mv?.value;
+    // FantasyCalc's position reflects fantasy usage (e.g. Travis Hunter: WR, not DB).
+    const pos = mv?.player.position ?? fantasyPosition(db.get(id), startable) ?? "";
     if (v === undefined) unvalued++;
     else if (pos in byPos) byPos[pos]! += v;
   }
@@ -43,7 +46,7 @@ export async function valuesCommand(session: Session, who: string | undefined, o
 
   if (opts.league) {
     const rows = standingsOrder(rosters)
-      .map((r) => ({ r, v: rosterValue(r, db, book), pk: pickValue(r.roster_id) }))
+      .map((r) => ({ r, v: rosterValue(r, db, book, ctx.roster.startablePositions), pk: pickValue(r.roster_id) }))
       .sort((a, b) => b.v.players + b.pk - (a.v.players + a.pk))
       .map(({ r, v, pk }, i) => [
         i + 1,
@@ -75,11 +78,11 @@ export async function valuesCommand(session: Session, who: string | undefined, o
     .slice(0, opts.limit ?? ids.length)
     .map(({ id, p, v }) => [
       playerName(db, id),
-      p?.position ?? "?",
+      v?.player.position ?? fantasyPosition(p, ctx.roster.startablePositions) ?? p?.position ?? "?",
       p?.team ?? "FA",
       p?.age ?? "",
       v?.value ?? "-",
-      v ? `${p?.position ?? ""}${v.positionRank}` : "",
+      v ? `${v.player.position}${v.positionRank}` : "",
       v?.trend30Day ?? "",
     ]);
   const mine = picks.filter((p) => p.ownerRosterId === r.roster_id);
@@ -87,7 +90,7 @@ export async function valuesCommand(session: Session, who: string | undefined, o
     `${p.season} R${p.round}${p.originalRosterId === r.roster_id ? "" : ` (via ${shortTeam(ctx, p.originalRosterId)})`}`,
     book.picks.get(pickKey(p.season, p.round)) ?? "-",
   ]);
-  const total = rosterValue(r, db, book);
+  const total = rosterValue(r, db, book, ctx.roster.startablePositions);
   return [
     header(ctx, `Market values — ${teamLabel(ctx, r.roster_id)}`),
     "",
@@ -130,7 +133,7 @@ export async function tradeCommand(session: Session, give: string | undefined, g
       return { label: `${key} pick`, value: book.picks.get(key) ?? null, holder: "" };
     }
     const q = spec.toLowerCase();
-    const startable = [...db.keys()].filter((id) => ctx.roster.startablePositions.includes(db.get(id)?.position ?? ""));
+    const startable = [...db.keys()].filter((id) => isStartable(db.get(id), ctx.roster.startablePositions));
     const exact = db.has(spec) ? [spec] : startable.filter((id) => playerName(db, id).toLowerCase() === q);
     const matches = exact.length > 0 ? exact : startable.filter((id) => playerName(db, id).toLowerCase().includes(q));
     // Prefer players rostered in this league, then higher market value.
@@ -144,7 +147,7 @@ export async function tradeCommand(session: Session, give: string | undefined, g
     }
     const h = holderOf.get(best);
     return {
-      label: `${playerName(db, best)} ${db.get(best)?.position ?? ""}-${db.get(best)?.team ?? "FA"}`,
+      label: `${playerName(db, best)} ${fantasyPosition(db.get(best), ctx.roster.startablePositions) ?? ""}-${db.get(best)?.team ?? "FA"}`,
       value: book.byPlayer.get(best)?.value ?? null,
       holder: h === undefined ? "free agent" : shortTeam(ctx, h),
     };

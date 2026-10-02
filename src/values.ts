@@ -75,37 +75,55 @@ export async function loadValueBook(opts: LoadOptions): Promise<ValueBook> {
     tep: format.tep,
   });
   const file = join(opts.cacheDir, `fantasycalc-values-${query.toString().replace(/[^a-z0-9=]+/gi, "_")}.json`);
-  let ageMs = Number.POSITIVE_INFINITY;
-  try {
-    ageMs = now() - statSync(file).mtimeMs;
-  } catch {
-    // no cache yet
-  }
-  const readCache = () => ValuesSchema.parse(JSON.parse(readFileSync(file, "utf8")));
-
-  let rows: MarketValue[] | undefined;
-  let stale = false;
-  if (ageMs < Math.max(MIN_REFRESH_MS, opts.maxAgeMs ?? DEFAULT_MAX_AGE_MS)) {
+  const attemptFile = `${file}.attempt`;
+  const ageOf = (f: string) => {
     try {
-      rows = readCache();
+      return now() - statSync(f).mtimeMs;
     } catch {
-      rows = undefined;
+      return Number.POSITIVE_INFINITY;
     }
-  }
-  if (!rows) {
+  };
+  const readCache = (): MarketValue[] | null => {
     try {
-      const doFetch = opts.fetch ?? ((url, init) => fetch(url, init));
-      const res = await doFetch(`${BASE}/values/current?${query}`, { signal: AbortSignal.timeout(15_000) });
-      if (!res.ok) throw new Error(`FantasyCalc HTTP ${res.status}`);
-      rows = ValuesSchema.parse(await res.json());
-      mkdirSync(opts.cacheDir, { recursive: true });
-      writeFileSync(`${file}.tmp`, JSON.stringify(rows));
-      renameSync(`${file}.tmp`, file);
-      ageMs = 0;
-    } catch (err) {
-      if (!Number.isFinite(ageMs)) throw err;
+      return ValuesSchema.parse(JSON.parse(readFileSync(file, "utf8")));
+    } catch {
+      return null;
+    }
+  };
+
+  let ageMs = ageOf(file);
+  let rows: MarketValue[] | null = ageMs < Math.max(MIN_REFRESH_MS, opts.maxAgeMs ?? DEFAULT_MAX_AGE_MS) ? readCache() : null;
+  let stale = false;
+  if (!rows) {
+    // FantasyCalc allows at most one refresh per hour. Every attempt, failed or not, starts that
+    // clock, so a failing refresh is not retried on each command.
+    const sinceAttempt = ageOf(attemptFile);
+    if (sinceAttempt < MIN_REFRESH_MS) {
       rows = readCache();
+      if (!rows) {
+        throw new Error(
+          `FantasyCalc was last requested ${Math.round(sinceAttempt / 60_000)} min ago without a usable result; ` +
+            "its terms allow one request per hour",
+        );
+      }
       stale = true;
+    } else {
+      mkdirSync(opts.cacheDir, { recursive: true });
+      writeFileSync(attemptFile, `${new Date(now()).toISOString()}\n`);
+      try {
+        const doFetch = opts.fetch ?? ((url, init) => fetch(url, init));
+        const res = await doFetch(`${BASE}/values/current?${query}`, { signal: AbortSignal.timeout(15_000) });
+        if (!res.ok) throw new Error(`FantasyCalc HTTP ${res.status}`);
+        rows = ValuesSchema.parse(await res.json());
+        const tmp = `${file}.${process.pid}.tmp`;
+        writeFileSync(tmp, JSON.stringify(rows));
+        renameSync(tmp, file);
+        ageMs = 0;
+      } catch (err) {
+        rows = readCache();
+        if (!rows) throw err;
+        stale = true;
+      }
     }
   }
 

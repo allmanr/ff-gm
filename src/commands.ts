@@ -11,6 +11,7 @@ import type { ValueBook } from "./values.ts";
 import { byeWeeks } from "./schedule.ts";
 import { ppg, type StatBook } from "./stats.ts";
 import type { Player, Roster, Transaction } from "./sleeper/schemas.ts";
+import { eligiblePositions, fantasyPosition, isStartable } from "./positions.ts";
 
 export type Options = {
   week?: number;
@@ -90,13 +91,13 @@ export async function rostersCommand(session: Session): Promise<string> {
     drafts,
   });
   const rows = standingsOrder(rosters).map((r) => {
-    const byPos = (pos: string) => r.players.filter((id) => db.get(id)?.position === pos);
+    const byPos = (pos: string) => r.players.filter((id) => fantasyPosition(db.get(id), ctx.roster.startablePositions) === pos);
     const qbs = byPos("QB")
       .map((id) => `${db.get(id)?.last_name ?? id}${db.get(id)?.team ? "" : "(FA)"}`)
       .join(", ");
     const ages = r.players
       .map((id) => db.get(id))
-      .filter((p) => p && ctx.roster.startablePositions.includes(p.position ?? "") && typeof p.age === "number")
+      .filter((p) => isStartable(p, ctx.roster.startablePositions) && typeof p?.age === "number")
       .map((p) => p!.age!);
     const avgAge = ages.length ? (ages.reduce((a, b) => a + b, 0) / ages.length).toFixed(1) : "-";
     const firsts = seasons.map((s) => picks.filter((p) => p.season === s && p.round === 1 && p.ownerRosterId === r.roster_id).length);
@@ -182,7 +183,7 @@ export async function rosterCommand(session: Session, who: string | undefined): 
     return [
       slot,
       playerName(db, id),
-      p?.position ?? "?",
+      fantasyPosition(p, ctx.roster.startablePositions) ?? p?.position ?? "?",
       p?.team ?? "FA",
       p?.age ?? "",
       p?.injury_status ?? "",
@@ -198,7 +199,8 @@ export async function rosterCommand(session: Session, who: string | undefined): 
   ctx.roster.starterSlots.forEach((s, i) => rows.push(line(s.slot, r.starters[i] ?? "0")));
   const placed = new Set([...r.starters, ...r.reserve, ...r.taxi]);
   const bench = r.players.filter((id) => !placed.has(id));
-  bench.sort((a, b) => (db.get(a)?.position ?? "").localeCompare(db.get(b)?.position ?? ""));
+  const posOf = (id: string) => fantasyPosition(db.get(id), ctx.roster.startablePositions) ?? "";
+  bench.sort((a, b) => posOf(a).localeCompare(posOf(b)));
   for (const id of bench) rows.push(line("BN", id));
   for (const id of r.reserve) rows.push(line("IR", id));
   for (const id of r.taxi) rows.push(line("TAXI", id));
@@ -302,7 +304,7 @@ export async function freeAgentsCommand(session: Session, opts: Options): Promis
       (p.years_exp != null && p.years_exp <= 3));
   const candidates = [...db.values()]
     .filter((p) => !rostered.has(p.player_id))
-    .filter((p) => positions.includes(p.position ?? ""))
+    .filter((p) => eligiblePositions(p).some((x) => positions.includes(x)))
     .filter((p) => opts.all || current(p))
     .sort((a, b) =>
       opts.sort === "ppg"
@@ -312,7 +314,7 @@ export async function freeAgentsCommand(session: Session, opts: Options): Promis
     .slice(0, opts.limit ?? 25);
   const rows = candidates.map((p) => [
     playerName(db, p.player_id),
-    p.position ?? "?",
+    fantasyPosition(p, ctx.roster.startablePositions) ?? p.position ?? "?",
     p.team ?? "FA",
     p.age ?? "",
     p.injury_status ?? "",
@@ -352,14 +354,14 @@ export async function trendingCommand(session: Session, opts: Options): Promise<
   const holder = new Map<string, number>();
   for (const r of rosters) for (const id of rosterPlayerIds(r)) holder.set(id, r.roster_id);
   const rows = trend
-    .filter((t) => ctx.roster.startablePositions.includes(db.get(t.player_id)?.position ?? ""))
+    .filter((t) => isStartable(db.get(t.player_id), ctx.roster.startablePositions))
     .slice(0, opts.limit ?? 25)
     .map((t) => {
       const p = db.get(t.player_id);
       const h = holder.get(t.player_id);
       return [
         playerName(db, t.player_id),
-        p?.position ?? "?",
+        fantasyPosition(p, ctx.roster.startablePositions) ?? p?.position ?? "?",
         p?.team ?? "FA",
         p?.injury_status ?? "",
         t.count,
@@ -485,7 +487,7 @@ export async function playerCommand(session: Session, query: string | undefined)
   let matches = db.has(query)
     ? [db.get(query)!]
     : [...db.values()].filter(
-        (p) => ctx.roster.startablePositions.includes(p.position ?? "") && playerName(db, p.player_id).toLowerCase().includes(q),
+        (p) => isStartable(p, ctx.roster.startablePositions) && playerName(db, p.player_id).toLowerCase().includes(q),
       );
   if (matches.length > 1) {
     const exact = matches.filter((p) => playerName(db, p.player_id).toLowerCase() === q);

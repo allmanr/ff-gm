@@ -3,7 +3,7 @@
  * each slot's eligible positions and using each player at most once. Uses the Hungarian algorithm,
  * so it is correct for any flex structure (not only nested ones where greedy happens to work).
  */
-export type Candidate = { id: string; position: string; points: number };
+export type Candidate = { id: string; positions: readonly string[]; points: number };
 export type Slot = { slot: string; eligible: readonly string[] };
 export type Assignment = { slot: string; id: string | null; points: number };
 
@@ -66,13 +66,15 @@ export function optimalLineup(slots: Slot[], candidates: Candidate[]): { lineup:
   const cost = slots.map((s) =>
     cols.map((col) => {
       if (col.kind === "empty") return 0;
-      return s.eligible.includes(col.c.position) ? -col.c.points : BIG;
+      return col.c.positions.some((p) => s.eligible.includes(p)) ? -col.c.points : BIG;
     }),
   );
   const pick = slots.length ? hungarian(cost) : [];
   const lineup = slots.map((s, i) => {
     const col = cols[pick[i]!];
-    if (!col || col.kind === "empty" || !s.eligible.includes(col.c.position)) return { slot: s.slot, id: null, points: 0 };
+    if (!col || col.kind === "empty" || !col.c.positions.some((p) => s.eligible.includes(p))) {
+      return { slot: s.slot, id: null, points: 0 };
+    }
     return { slot: s.slot, id: col.c.id, points: col.c.points };
   });
   return { lineup, total: lineup.reduce((a, x) => a + x.points, 0) };

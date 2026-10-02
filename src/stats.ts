@@ -4,6 +4,7 @@ import type { LeagueContext } from "./context.ts";
 import type { PlayerDb } from "./players.ts";
 import { parseCsv } from "./schedule.ts";
 import { scoreStatLine, STAT_COLUMNS, unsupportedScoringKeys, type StatLine } from "./scoring.ts";
+import { isStartable } from "./positions.ts";
 
 /** nflverse weekly player stats and season rosters (CC-BY-4.0). Rosters map gsis_id → sleeper_id. */
 export const STATS_ATTRIBUTION = "Player stats: nflverse (CC-BY-4.0, https://github.com/nflverse/nflverse-data)";
@@ -68,8 +69,10 @@ export function buildStatBook(args: {
   for (const r of rowsOf(args.statsCsv)) {
     if (r.season !== args.ctx.season || r.season_type !== "REG") continue;
     const sleeperId = toSleeper.get(r.player_id ?? "");
-    const position = sleeperId ? args.db.get(sleeperId)?.position : undefined;
-    if (!sleeperId || !position || !args.ctx.roster.startablePositions.includes(position)) {
+    const player = sleeperId ? args.db.get(sleeperId) : undefined;
+    // Reception bonuses follow the primary position; eligibility uses every fantasy position.
+    const position = player?.position ?? undefined;
+    if (!sleeperId || !position || !isStartable(player, args.ctx.roster.startablePositions)) {
       if (["QB", "RB", "WR", "TE"].includes(r.position ?? "")) unmatched++;
       continue;
     }

@@ -116,3 +116,85 @@ describe("review regressions", () => {
     expect(out).toMatch(/Filter: on an NFL team/);
   });
 });
+
+describe("second review regressions", () => {
+  type NflStateJson = { season_type: string; week: number };
+  type LeagueSettingsJson = { previous_league_id: string | null; settings: Record<string, number> };
+  type PlayerJson = Record<string, { position: string | null; fantasy_positions: string[] | null; full_name: string }>;
+  type RosterJson = { roster_id: number; players: string[]; starters: string[] };
+
+  it("includes week-1 (offseason/preseason) transactions before any week is scored", async () => {
+    const { historyCommand } = await import("../src/history.ts");
+    const { waiversCommand } = await import("../src/waivers.ts");
+    const nfl_state = { ...fixture<NflStateJson>("nfl_state"), season_type: "pre", week: 0 };
+    const league = mutated<LeagueSettingsJson>("league", (l) => {
+      l.previous_league_id = null;
+      l.settings.last_scored_leg = 0;
+      l.settings.leg = 0;
+    });
+    const { session } = fixtureSession({ overrides: { nfl_state, league } });
+    const out = await historyCommand(session, undefined, {});
+    expect(out).toMatch(/## 2026 \(current\): \d+ trades?/);
+    expect(await waiversCommand(session, {})).not.toMatch(/no waiver claims yet/);
+  });
+
+  /** One of the Owner's rostered players recast as a DB eligible at WR (like Travis Hunter). */
+  function multiPositionFixture() {
+    const rosters = fixture<RosterJson[]>("rosters");
+    const mine = rosters.find((r) => r.roster_id === FIXTURE_OWNER_ROSTER)!;
+    const players = fixture<PlayerJson>("players");
+    const id = mine.players.find((p) => players[p]?.position === "WR")!;
+    const overridden = mutated<PlayerJson>("players", (ps) => {
+      ps[id]!.position = "DB";
+      ps[id]!.fantasy_positions = ["DB", "WR"];
+    });
+    return { id, name: players[id]!.full_name, overridden };
+  }
+
+  it("values multi-position players at their fantasy position and finds them by name", async () => {
+    const { valuesCommand, tradeCommand } = await import("../src/value-commands.ts");
+    const { createSession } = await import("../src/session.ts");
+    const { createSleeperClient } = await import("../src/sleeper/client.ts");
+    const { fixtureFetch, fixtureOwner } = await import("./helpers.ts");
+    const { id, name, overridden } = multiPositionFixture();
+    const { fetch } = fixtureFetch({ players: overridden });
+    const values = [
+      { player: { name, sleeperId: id, position: "WR" }, value: 937, overallRank: 1, positionRank: 82 },
+      { player: { name: "2027 1st", sleeperId: "FP", position: "PICK" }, value: 100, overallRank: 2, positionRank: 1 },
+    ];
+    const session = createSession({
+      client: createSleeperClient({ fetch, retries: 0 }),
+      owner: fixtureOwner(),
+      cacheDir: mkdtempSync(join(tmpdir(), "ff-multi-")),
+      valuesFetch: async () => Response.json(values),
+    });
+    const out = await valuesCommand(session, "me", {});
+    expect(out).toMatch(/WR82/);
+    expect(out).toMatch(/Totals: players 937 \(QB 0, RB 0, WR 937, TE 0\)/);
+    expect(await tradeCommand(session, name, "2027 1st")).toContain(`${name} WR-`);
+  });
+
+  it("keeps multi-position players in the schedule table and the lineup optimizer", async () => {
+    const { benchCommand } = await import("../src/bench.ts");
+    const { scheduleCommand } = await import("../src/schedule.ts");
+    const { createSession } = await import("../src/session.ts");
+    const { createSleeperClient } = await import("../src/sleeper/client.ts");
+    const { fixtureFetch, fixtureOwner } = await import("./helpers.ts");
+    const { id, name, overridden } = multiPositionFixture();
+    const { fetch } = fixtureFetch({ players: overridden });
+    const csv =
+      "game_id,season,game_type,week,gameday,weekday,gametime,away_team,away_score,home_team,home_score,spread_line,total_line\n" +
+      `2026_04_X_Y,2026,REG,4,2026-10-04,Sunday,13:00,${fixture<Record<string, { team: string }>>("players")[id]!.team},,ZZZ,,3,44\n`;
+    const session = createSession({
+      client: createSleeperClient({ fetch, retries: 0 }),
+      owner: fixtureOwner(),
+      cacheDir: mkdtempSync(join(tmpdir(), "ff-multi-")),
+      scheduleFetch: async () => new Response(csv),
+    });
+    expect(await scheduleCommand(session, { week: 4 })).toContain(name);
+    // The optimizer may place the player at WR; his week-3 points must not vanish from the best lineup.
+    const out = await benchCommand(session, "me", { week: 3 });
+    const [, actual, best] = out.match(/Actual ([\d.]+) · best possible ([\d.]+)/)!;
+    expect(Number(best)).toBeGreaterThanOrEqual(Number(actual));
+  });
+});

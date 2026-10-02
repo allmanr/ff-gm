@@ -21,7 +21,7 @@ function runSlot(ms: number): { key: string; minute: number } {
 /** When waivers actually process (observed), FAAB left per team, and this league's winning bids. */
 export async function waiversCommand(session: Session, opts: Options): Promise<string> {
   const { ctx, rosters } = await session.data();
-  const weeks = await session.playedWeeks();
+  const weeks = await session.transactionWeeks();
   const [db, ...byWeek] = await Promise.all([session.players(), ...weeks.map((w) => session.transactions(w))]);
   const claims: Transaction[] = byWeek.flat().filter((t) => t.type === "waiver" && t.status_updated);
 

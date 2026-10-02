@@ -114,6 +114,21 @@ export function createSession(deps: SessionDeps) {
       return db;
     });
 
+  /** Weeks with matchup data so far: through the league's current week (`leg`), capped at 18. */
+  const playedWeeks = async (): Promise<number[]> => {
+    const { ctx, league } = await data();
+    const scored = league.settings.last_scored_leg ?? 0;
+    const inSeason = ctx.nfl.seasonType === "regular" || ctx.nfl.seasonType === "post";
+    const current = inSeason ? (league.settings.leg ?? ctx.nfl.week) : scored;
+    return range(1, Math.min(Math.max(current, scored), 18));
+  };
+
+  /**
+   * Weeks whose transactions exist so far. Sleeper files offseason and preseason moves under week 1,
+   * so week 1 is always included even before any week has been played.
+   */
+  const transactionWeeks = async (): Promise<number[]> => range(1, Math.max(1, (await playedWeeks()).at(-1) ?? 1));
+
   return {
     data,
     /** Warnings to show with any output: context warnings plus stale-data notices. */
@@ -185,14 +200,8 @@ export function createSession(deps: SessionDeps) {
         await data();
         return deps.client.trending(type, hours, 100); // Sleeper caps this at 100
       }),
-    /** Weeks with matchup data so far: through the league's current week (`leg`), capped at 18. */
-    async playedWeeks(): Promise<number[]> {
-      const { ctx, league } = await data();
-      const scored = league.settings.last_scored_leg ?? 0;
-      const inSeason = ctx.nfl.seasonType === "regular" || ctx.nfl.seasonType === "post";
-      const current = inSeason ? (league.settings.leg ?? ctx.nfl.week) : scored;
-      return range(1, Math.min(Math.max(current, scored), 18));
-    },
+    playedWeeks,
+    transactionWeeks,
   };
 }
 
