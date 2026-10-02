@@ -23,7 +23,7 @@ function sandbox() {
 describe("GM launcher", () => {
   function setup() {
     const repo = sandbox();
-    copyFileSync(join(repoRoot, "scripts/gm"), join(repo, "scripts/gm"));
+    copyFileSync(join(repoRoot, "bin/ff-gm"), join(repo, "bin/ff-gm"));
     copyFileSync(join(repoRoot, "gm/CHARTER.md"), join(repo, "gm/CHARTER.md"));
     writeFileSync(join(repo, "bin/ff"), '#!/usr/bin/env bash\n[[ "$1" == context ]] || exit 2\n[[ "${FAIL_CONTEXT:-}" != 1 ]] || exit 1\ncp "$FF_PRIVATE_DIR/seed.md" "$FF_PRIVATE_DIR/LEAGUE_CONSTITUTION.md"\n', { mode: 0o755 });
     writeFileSync(join(repo, "bin/codex"), '#!/usr/bin/env bash\nprintf "%s\\n" "$@" > "$FF_PRIVATE_DIR/codex-args.txt"\n', { mode: 0o755 });
@@ -42,7 +42,7 @@ describe("GM launcher", () => {
     if (ctx.owner.status === "verified") ctx.owner.managerName = attack;
     const constitution = renderConstitution(ctx);
     writeFileSync(join(repo, "private/seed.md"), constitution);
-    const result = spawnSync("bash", [join(repo, "scripts/gm"), "ask", "Check the lineup"], { env, encoding: "utf8" });
+    const result = spawnSync("bash", [join(repo, "bin/ff-gm"), "ask", "Check the lineup"], { env, encoding: "utf8" });
     expect(result.status).toBe(0);
     const instructions = readFileSync(join(repo, "private/AGENTS.md"), "utf8");
     expect(instructions).not.toContain(attack);
@@ -56,7 +56,7 @@ describe("GM launcher", () => {
 
   it("does not start Codex when context validation fails", () => {
     const { repo, env } = setup();
-    const result = spawnSync("bash", [join(repo, "scripts/gm")], { env: { ...env, FAIL_CONTEXT: "1" }, encoding: "utf8" });
+    const result = spawnSync("bash", [join(repo, "bin/ff-gm")], { env: { ...env, FAIL_CONTEXT: "1" }, encoding: "utf8" });
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("league validation failed");
     expect(() => readFileSync(join(repo, "private/codex-args.txt"))).toThrow();

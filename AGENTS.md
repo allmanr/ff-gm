@@ -17,7 +17,7 @@ No football recommendation may be generated without a validated league context. 
 - full PPR (`scoring_settings.rec = 1`);
 - TE reception bonus (`scoring_settings.bonus_rec_te > 0`).
 
-Enforcement is mechanical, not a prompt: every `ff` data command validates the league first and exits non-zero on failure, and `scripts/gm` refuses to start the GM if `ff context` fails. Never replace an exact Sleeper setting with a generic fantasy assumption. Changing an expected invariant requires an explicit Owner decision recorded in `docs/DECISIONS.md`, never a code "fix" to make validation pass.
+Enforcement is mechanical, not a prompt: every `ff` data command validates the league first and exits non-zero on failure, and `bin/ff-gm` refuses to start the GM if `ff context` fails. Never replace an exact Sleeper setting with a generic fantasy assumption. Changing an expected invariant requires an explicit Owner decision recorded in `docs/DECISIONS.md`, never a code "fix" to make validation pass.
 
 ## Sleeper facts that bite
 
