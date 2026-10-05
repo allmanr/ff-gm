@@ -9,7 +9,8 @@
     "node": ">=24"
   },
   "bin": {
-    "ff": "./bin/ff"
+    "ff": "./bin/ff",
+    "ff-gm": "./bin/ff-gm"
   },
   "scripts": {
     "ff": "bin/ff",

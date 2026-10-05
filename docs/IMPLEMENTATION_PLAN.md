@@ -6,7 +6,7 @@ Build the smallest thing that gives the Owner validated football advice this sea
 
 ## Phase 1 — `ff` CLI (done)
 
-Every command validates the league and roster ownership before printing anything (exit 1 on failure). Run `bin/ff help` for options.
+Every command validates the league and roster ownership before printing anything (exit 1 on failure). Run `ff help` for options.
 
 | Command | Output |
 |---|---|
@@ -24,7 +24,7 @@ Every command validates the league and roster ownership before printing anything
 ## Phase 2 — GM v0 (done)
 
 - `gm/CHARTER.md`: role, ground rules (facts only from `ff`, fail closed, off-limits sources), tools, decision lenses, recurring work, memory files, output style.
-- `scripts/gm`: validates, assembles `private/AGENTS.md`, starts Codex in `private/`. `ask "…"` for one turn; `brief <name>` for the routines in `gm/briefs/`.
+- `bin/ff-gm`: validates, assembles `private/AGENTS.md`, starts Codex in `private/`. `ask "…"` for one turn; `brief <name>` for the routines in `gm/briefs/`.
 
 ## Phase 3 — added after real gaps (done)
 
@@ -32,7 +32,7 @@ League Watcher (`ff changes`), league history, FantasyCalc values, NFL schedule 
 
 ## Next — only when real use shows the need
 
-1. Owner uses the GM weekly (`scripts/gm brief war-room` on Tuesdays, `lineup` before kickoffs). Note what it gets wrong in `private/notes/`.
+1. Owner uses the GM weekly (`ff-gm brief war-room` on Tuesdays, `lineup` before kickoffs). Note what it gets wrong in `private/notes/`.
 2. Scheduled briefs with a notification channel, once the Owner picks one.
 3. Forward projections, if the GM's research proves insufficient (PROJECT_STATE lists the options).
 4. Optional review findings listed in PROJECT_STATE.

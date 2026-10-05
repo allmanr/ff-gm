@@ -104,7 +104,7 @@ Historical discussion belongs in `docs/meetings/`. Technical detail may live in 
 
 **Rationale:** GPT-6 is the current OpenAI model family for new complex reasoning and Codex work. Astra maximizes capability; Sol provides a better cost/capability balance for repeated production workloads.
 
-**Status:** active for GM routing — `scripts/gm` defaults to GPT-6 Sol / high (override with `FF_GM_MODEL`/`FF_GM_EFFORT`; use Astra for major franchise decisions). The initial-implementation clause is superseded by D-015: V1 was built in Claude Code.
+**Status:** active for GM routing — `bin/ff-gm` defaults to GPT-6 Sol / high (override with `FF_GM_MODEL`/`FF_GM_EFFORT`; use Astra for major franchise decisions). The initial-implementation clause is superseded by D-015: V1 was built in Claude Code.
 
 ---
 
