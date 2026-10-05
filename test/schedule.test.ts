@@ -69,6 +69,42 @@ describe("bye weeks", () => {
 });
 
 describe("ff schedule", () => {
+  it.each(["dropped", "IR"])("preserves saved starters and bench players after a starter is %s", async (change) => {
+    type RosterJson = { roster_id: number; starters: string[]; players: string[]; reserve: string[] };
+    type PlayerJson = Record<string, { full_name: string; team: string | null; position: string | null }>;
+    const rosters = fixture<RosterJson[]>("rosters");
+    const mine = rosters.find((r) => r.roster_id === FIXTURE_OWNER_ROSTER)!;
+    const players = fixture<PlayerJson>("players");
+    const starter = mine.starters.find((id) => players[id]?.position === "QB")!;
+    const bench = mine.players.find((id) => !mine.starters.includes(id) && players[id]?.position === "QB")!;
+    expect(starter).toBeDefined();
+    expect(bench).toBeDefined();
+    const savedPlayers = [...mine.players];
+    const savedStarters = [...mine.starters];
+    mine.starters = mine.starters.filter((id) => id !== starter);
+    if (change === "dropped") mine.players = mine.players.filter((id) => id !== starter);
+    else mine.reserve.push(starter);
+    // A historical bench player has also left today's roster.
+    mine.players = mine.players.filter((id) => id !== bench);
+    const { fetch } = fixtureFetch({
+      rosters,
+      empty: [{ roster_id: FIXTURE_OWNER_ROSTER, matchup_id: 1, players: savedPlayers, starters: savedStarters }],
+    });
+    const starterTeam = players[starter]!.team!;
+    const opponent = starterTeam === "BUF" ? "KC" : "BUF";
+    const session = createSession({
+      client: createSleeperClient({ fetch, retries: 0 }),
+      owner: fixtureOwner(),
+      cacheDir: mkdtempSync(join(tmpdir(), "ff-sched-")),
+      scheduleFetch: async () => new Response([HEAD, row(5, "KC", "BUF"), row(6, starterTeam, opponent)].join("\n")),
+    });
+    const out = await scheduleCommand(session, { week: 5 });
+    const starterRows = out.split("\n").filter((line) => line.startsWith("start") && line.includes(players[starter]!.full_name));
+    expect(starterRows).toHaveLength(1);
+    expect(out.split("\n").some((line) => line.startsWith("bench") && line.includes(players[bench]!.full_name))).toBe(true);
+    expect(out).toContain("Sleeper's week 5 lineup");
+  });
+
   it("lists byes and flags the owner's starters on bye", async () => {
     type RosterJson = { roster_id: number; starters: string[] };
     type PlayerJson = Record<string, { team: string | null; position: string | null }>;
@@ -90,7 +126,35 @@ describe("ff schedule", () => {
     });
     const out = await scheduleCommand(session, { week: 5 });
     expect(out).toMatch(new RegExp(`Byes: .*${starterTeam}`));
-    expect(out).toMatch(/Current starters on bye: /);
+    expect(out).toMatch(/Starters on bye: /);
     expect(out).toContain(SCHEDULE_ATTRIBUTION);
+  });
+
+  it("uses the week's own Sleeper lineup, not the current week's roster starters", async () => {
+    type RosterJson = { roster_id: number; starters: string[]; players: string[] };
+    type PlayerJson = Record<string, { team: string | null; position: string | null }>;
+    const players = fixture<PlayerJson>("players");
+    const mine = fixture<RosterJson[]>("rosters").find((r) => r.roster_id === FIXTURE_OWNER_ROSTER)!;
+    const starterTeam = players[mine.starters.find((id) => players[id]?.team)!]!.team!;
+    const allTeams = [...new Set(Object.values(players).map((p) => p.team).filter((t): t is string => Boolean(t)))].filter(
+      (t) => t !== starterTeam,
+    );
+    const playing = new Set(allTeams.slice(0, allTeams.length - (allTeams.length % 2)));
+    const benchOnly = mine.players.filter((id) => !mine.starters.includes(id) && playing.has(players[id]?.team ?? ""));
+    const lines = [HEAD];
+    for (let i = 0; i + 1 < allTeams.length; i += 2) lines.push(row(5, allTeams[i]!, allTeams[i + 1]!));
+    lines.push(row(6, starterTeam, allTeams[0]!));
+    // Week 5 lineup already set to bench players, so no current starter on bye is in it.
+    const { fetch } = fixtureFetch({ empty: [{ roster_id: FIXTURE_OWNER_ROSTER, matchup_id: 1, starters: benchOnly }] });
+    const session = createSession({
+      client: createSleeperClient({ fetch, retries: 0 }),
+      owner: fixtureOwner(),
+      cacheDir: mkdtempSync(join(tmpdir(), "ff-sched-")),
+      scheduleFetch: async () => new Response(lines.join("\n")),
+    });
+    const out = await scheduleCommand(session, { week: 5 });
+    expect(benchOnly.length).toBeGreaterThan(0);
+    expect(out).not.toMatch(/starters on bye: /i);
+    expect(out).toMatch(/^start\s/m);
   });
 });

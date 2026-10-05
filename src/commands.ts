@@ -312,6 +312,20 @@ export async function freeAgentsCommand(session: Session, opts: Options): Promis
         : marketValue(b.player_id) - marketValue(a.player_id) || (a.search_rank ?? 1e9) - (b.search_rank ?? 1e9),
     )
     .slice(0, opts.limit ?? 25);
+  // A starter's injury makes his direct backup a waiver target; scan every free agent, not just the listed ones.
+  const injuredStarter = new Map<string, Player>();
+  for (const p of db.values()) {
+    if (p.active !== false && p.team && p.depth_chart_order === 1 && p.injury_status) {
+      injuredStarter.set(`${p.team}|${p.depth_chart_position}`, p);
+    }
+  }
+  const backups = [...db.values()]
+    .filter((p) => !rostered.has(p.player_id) && current(p) && p.depth_chart_order === 2)
+    .filter((p) => eligiblePositions(p).some((x) => positions.includes(x)))
+    .flatMap((p) => {
+      const s = injuredStarter.get(`${p.team}|${p.depth_chart_position}`);
+      return s ? [`- ${playerName(db, p.player_id)} ${p.position}-${p.team}: backup to ${playerName(db, s.player_id)} (${s.injury_status})`] : [];
+    });
   const rows = candidates.map((p) => [
     playerName(db, p.player_id),
     fantasyPosition(p, ctx.roster.startablePositions) ?? p.position ?? "?",
@@ -333,6 +347,9 @@ export async function freeAgentsCommand(session: Session, opts: Options): Promis
     "",
     table(["Player", "Pos", "NFL", "Age", "Inj", "Depth", "Adds 24h", "Adds 72h", "Value", "G", "PPG", "L3", "Sleeper ID"], rows),
     "",
+    ...(backups.length
+      ? ["## Free-agent backups to injured starters", "", ...backups, "", "From Sleeper's depth charts, which can be stale or incomplete; confirm with team news.", ""]
+      : []),
     (opts.sort === "ppg" && !stats.book
       ? "PPG sorting unavailable; sorted by market value where available."
       : opts.sort === "ppg"
