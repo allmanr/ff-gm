@@ -14,7 +14,7 @@ import {
 } from "../src/commands.ts";
 import { renderConstitution } from "../src/constitution.ts";
 import { TransactionsSchema } from "../src/sleeper/schemas.ts";
-import { fixture, fixtureSession, FIXTURE_OWNER_ROSTER } from "./helpers.ts";
+import { fixture, fixtureSession, FIXTURE_OWNER_ROSTER, mutated } from "./helpers.ts";
 
 describe("commands on recorded data", () => {
   it("renders a constitution with exact rules and the TE bonus explained", async () => {
@@ -77,6 +77,29 @@ describe("commands on recorded data", () => {
     expect(ids.length).toBeGreaterThan(0);
     for (const id of ids) expect(rostered.has(id)).toBe(false);
     await expect(freeAgentsCommand(session, { pos: ["K"] })).rejects.toBeInstanceOf(UsageError);
+  });
+
+  it("flags free-agent backups to injured starters, even outside the listed top players", async () => {
+    type PlayerJson = Record<string, Record<string, unknown>>;
+    const qb = (id: string, name: string, order: number, injury: string | null) => ({
+      player_id: id, first_name: name, last_name: "Test", full_name: `${name} Test`, position: "QB", fantasy_positions: ["QB"],
+      team: "ZZZ", age: 28, years_exp: 5, status: "Active", injury_status: injury, active: true, search_rank: 9999,
+      depth_chart_order: order, depth_chart_position: "QB",
+    });
+    const players = mutated<PlayerJson>("players", (ps) => {
+      ps["9000001"] = qb("9000001", "Starter", 1, "Questionable");
+      ps["9000002"] = qb("9000002", "Backup", 2, null);
+    });
+    const { session } = fixtureSession({ overrides: { players } });
+    const out = await freeAgentsCommand(session, { pos: ["QB"], limit: 1 });
+    expect(out).toContain("Backup Test QB-ZZZ: backup to Starter Test (Questionable)");
+
+    const healthy = mutated<PlayerJson>("players", (ps) => {
+      ps["9000001"] = qb("9000001", "Starter", 1, null);
+      ps["9000002"] = qb("9000002", "Backup", 2, null);
+    });
+    const { session: s2 } = fixtureSession({ overrides: { players: healthy } });
+    expect(await freeAgentsCommand(s2, { pos: ["QB"], limit: 1 })).not.toContain("Backup Test");
   });
 
   it("marks trending players as available or rostered", async () => {

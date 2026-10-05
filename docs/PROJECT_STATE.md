@@ -32,7 +32,7 @@ Expected invariants, verified live on every run: dynasty, Superflex, full PPR, T
 - PR #2 fixes: Sleeper names stay out of GM instruction files; leak checks scan staged blobs even after working-copy sanitization/removal; FantasyCalc attempt reservations use an atomic cross-process lock and recheck the hourly limit before fetching. Two-process tests cover both successful and failed refreshes.
 - Final PR #2 fixes: unsupported scoring fails at both direct scoring and stat-book boundaries (including K/DEF/IDP when startable); unavailable PPG sorting is labeled; manual refresh honors the daily cache; trades require a verified Owner; waiver medians average both middle bids. The scoring verifier also fails when no scores are comparable.
 - Private data repo created and first push made.
-- 2026-10-05: `ff schedule --week N` uses that week's saved Sleeper lineup (was the current week's, giving false bye warnings). GM charter now requires re-verifying a prior recommendation's premises and showing the weekly points gain before recommending a move.
+- 2026-10-05: `ff schedule --week N` uses that week's saved Sleeper lineup (was the current week's, giving false bye warnings). GM charter now requires re-verifying a prior recommendation's premises and showing the weekly points gain before recommending a move. `ff free-agents` lists free-agent backups to injured starters (from Sleeper depth charts); the war-room brief re-checks open trade ideas instead of requiring two new ones.
 
 ## Open (impact → verdict)
 
