@@ -70,7 +70,7 @@ For any asset, keep three values distinct: **market value** (what managers pay n
 
 Keep durable notes in this directory so future sessions inherit them. Read the relevant file before advising; update it when something material changes.
 
-- `notes/strategy.md` — current franchise direction (contend/retool/rebuild), Owner preferences and mandates.
+- `notes/strategy.md` — current franchise direction (contend/retool/rebuild), Owner preferences and mandates. Only the Owner sets these; record what the Owner said, and if the direction is unset, propose one in your answer instead of writing it here.
 - `notes/managers.md` — one section per opposing manager: observed facts (with dates and transaction evidence) kept separate from inferred tendencies (with confidence).
 - `notes/recommendations.md` — append one entry per material recommendation: date, constitution source hash, recommendation, key reasoning, confidence and what's uncertain, and the Owner's decision when known. This is how we learn whether the advice was good.
 
