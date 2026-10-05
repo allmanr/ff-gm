@@ -204,7 +204,9 @@ export async function scheduleCommand(session: Session, opts: Options): Promise<
   if (ctx.owner.status === "verified") {
     const ownerRosterId = ctx.owner.rosterId;
     const r = rosters.find((x) => x.roster_id === ownerRosterId)!;
-    const starters = new Set(r.starters);
+    // Sleeper keeps a lineup per week; the roster only holds the current week's.
+    const weekLineup = (await session.matchups(week)).find((m) => m.roster_id === ownerRosterId)?.starters ?? [];
+    const starters = new Set(weekLineup.length ? weekLineup : r.starters);
     const gameFor = (t: string) => games.find((g) => g.away === t || g.home === t);
     const mine = r.players
       .filter((id) => !r.reserve.includes(id))
@@ -236,8 +238,8 @@ export async function scheduleCommand(session: Session, opts: Options): Promise<
       "",
       table(["Lineup", "Player", "Pos", "Inj", "Game", "Kickoff", "Team implied pts"], mine.map((m) => m.row)),
     );
-    if (startersOnBye.length) out.push("", `**Current starters on bye: ${startersOnBye.join(", ")}** — replace before kickoff.`);
+    if (startersOnBye.length) out.push("", `**Starters on bye: ${startersOnBye.join(", ")}** — replace before kickoff.`);
   }
-  out.push("", "Lineup column reflects Sleeper's current starters.", `${SCHEDULE_ATTRIBUTION}${stale ? " (STALE: refresh failed)" : ""}.`);
+  out.push("", `Lineup column reflects Sleeper's week ${week} lineup (current starters if Sleeper has none for that week).`, `${SCHEDULE_ATTRIBUTION}${stale ? " (STALE: refresh failed)" : ""}.`);
   return out.join("\n");
 }
