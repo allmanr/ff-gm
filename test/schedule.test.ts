@@ -69,6 +69,42 @@ describe("bye weeks", () => {
 });
 
 describe("ff schedule", () => {
+  it.each(["dropped", "IR"])("preserves saved starters and bench players after a starter is %s", async (change) => {
+    type RosterJson = { roster_id: number; starters: string[]; players: string[]; reserve: string[] };
+    type PlayerJson = Record<string, { full_name: string; team: string | null; position: string | null }>;
+    const rosters = fixture<RosterJson[]>("rosters");
+    const mine = rosters.find((r) => r.roster_id === FIXTURE_OWNER_ROSTER)!;
+    const players = fixture<PlayerJson>("players");
+    const starter = mine.starters.find((id) => players[id]?.position === "QB")!;
+    const bench = mine.players.find((id) => !mine.starters.includes(id) && players[id]?.position === "QB")!;
+    expect(starter).toBeDefined();
+    expect(bench).toBeDefined();
+    const savedPlayers = [...mine.players];
+    const savedStarters = [...mine.starters];
+    mine.starters = mine.starters.filter((id) => id !== starter);
+    if (change === "dropped") mine.players = mine.players.filter((id) => id !== starter);
+    else mine.reserve.push(starter);
+    // A historical bench player has also left today's roster.
+    mine.players = mine.players.filter((id) => id !== bench);
+    const { fetch } = fixtureFetch({
+      rosters,
+      empty: [{ roster_id: FIXTURE_OWNER_ROSTER, matchup_id: 1, players: savedPlayers, starters: savedStarters }],
+    });
+    const starterTeam = players[starter]!.team!;
+    const opponent = starterTeam === "BUF" ? "KC" : "BUF";
+    const session = createSession({
+      client: createSleeperClient({ fetch, retries: 0 }),
+      owner: fixtureOwner(),
+      cacheDir: mkdtempSync(join(tmpdir(), "ff-sched-")),
+      scheduleFetch: async () => new Response([HEAD, row(5, "KC", "BUF"), row(6, starterTeam, opponent)].join("\n")),
+    });
+    const out = await scheduleCommand(session, { week: 5 });
+    const starterRows = out.split("\n").filter((line) => line.startsWith("start") && line.includes(players[starter]!.full_name));
+    expect(starterRows).toHaveLength(1);
+    expect(out.split("\n").some((line) => line.startsWith("bench") && line.includes(players[bench]!.full_name))).toBe(true);
+    expect(out).toContain("Sleeper's week 5 lineup");
+  });
+
   it("lists byes and flags the owner's starters on bye", async () => {
     type RosterJson = { roster_id: number; starters: string[] };
     type PlayerJson = Record<string, { team: string | null; position: string | null }>;

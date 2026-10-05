@@ -18,6 +18,7 @@ Expected invariants, verified live on every run: dynasty, Superflex, full PPR, T
 
 ## Verification status
 
+- 2026-10-05 review follow-up: `npm run check` passes typecheck, lint, 128 tests, and privacy checks. One bounded live GM acceptance run completed; evidence and its coverage limits are retained under `private/evaluations/`. This is not a consistency benchmark. Deterministic regressions cover saved starters subsequently dropped or placed on Sleeper IR.
 - Final PR #2 pass: `npm run check` passes typecheck, lint, 124 tests, and the privacy scan of Git index blobs and working files. Tests inject supplementary fetchers; a global fetch guard fails any accidental network attempt, even if a command catches the error.
 - Regression tests reproduced manual player-cache bypass, unset-Owner trade checks, even-sample waiver medians, and partial scoring before their fixes. Existing launcher, staged-leak, and two-process FantasyCalc regressions still pass. Launcher tests check instruction/data separation; model obedience was not tested.
 - Live, 2026-10-02: `npm run verify-scoring` now refuses with `st_ff, st_fum_rec`, which nflverse cannot supply. The previous 749/749 comparison assumed those keys were zero and did **not** establish full scoring coverage. Exact nflverse PPG is unavailable until the source covers every active scoring rule; Sleeper's actual matchup points remain usable.
@@ -33,6 +34,7 @@ Expected invariants, verified live on every run: dynasty, Superflex, full PPR, T
 - Final PR #2 fixes: unsupported scoring fails at both direct scoring and stat-book boundaries (including K/DEF/IDP when startable); unavailable PPG sorting is labeled; manual refresh honors the daily cache; trades require a verified Owner; waiver medians average both middle bids. The scoring verifier also fails when no scores are comparable.
 - Private data repo created and first push made.
 - 2026-10-05: `ff schedule --week N` uses that week's saved Sleeper lineup (was the current week's, giving false bye warnings). GM charter now requires re-verifying a prior recommendation's premises and showing the weekly points gain before recommending a move. `ff free-agents` lists free-agent backups to injured starters (from Sleeper depth charts); the war-room brief re-checks open trade ideas instead of requiring two new ones.
+- 2026-10-05 review fixes: saved schedule rows now use the matchup's player snapshot and starters, preserving players subsequently dropped or moved to IR; today's active roster is the fallback when no saved lineup exists. The charter permits recommendations with an explicitly unavailable points comparison and separately sourced production estimates; missing points never imply zero gain. Regression coverage checks both roster changes and that the launcher supplies these evidence rules.
 
 ## Open (impact → verdict)
 
@@ -48,6 +50,7 @@ Expected invariants, verified live on every run: dynasty, Superflex, full PPR, T
 
 ## Closed — don't reopen without new evidence
 
+- **Saved lineup completeness and unavailable point comparisons** → fixed. Historical rows no longer disappear after roster changes, and the charter no longer requires nonexistent scoring evidence. Regression checks fail without the fixes.
 - Agents API runtime, Vercel/Postgres deployment, and owner-bootstrap UI for V1: replaced by D-015.
 - Public vs. private repository: stays public; private data in `private/` (D-016).
 - Plan-in-one-model, implement-in-another for V1: rejected as handoff overhead.

@@ -205,11 +205,14 @@ export async function scheduleCommand(session: Session, opts: Options): Promise<
     const ownerRosterId = ctx.owner.rosterId;
     const r = rosters.find((x) => x.roster_id === ownerRosterId)!;
     // Sleeper keeps a lineup per week; the roster only holds the current week's.
-    const weekLineup = (await session.matchups(week)).find((m) => m.roster_id === ownerRosterId)?.starters ?? [];
-    const starters = new Set(weekLineup.length ? weekLineup : r.starters);
+    const matchup = (await session.matchups(week)).find((m) => m.roster_id === ownerRosterId);
+    const savedLineup = matchup && matchup.starters.length > 0 ? matchup : undefined;
+    const starters = new Set(savedLineup ? savedLineup.starters : r.starters);
+    const playerIds = savedLineup
+      ? [...new Set([...savedLineup.players, ...savedLineup.starters])]
+      : r.players.filter((id) => !r.reserve.includes(id));
     const gameFor = (t: string) => games.find((g) => g.away === t || g.home === t);
-    const mine = r.players
-      .filter((id) => !r.reserve.includes(id))
+    const mine = playerIds
       .map((id) => ({ id, p: db.get(id) }))
       .filter(({ p }) => isStartable(p, ctx.roster.startablePositions))
       .map(({ id, p }) => {
