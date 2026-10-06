@@ -145,7 +145,7 @@ Historical discussion belongs in `docs/meetings/`. Technical detail may live in 
 
 **Rationale:** Remove repeated work before trading model quality for lower token prices. Keep D-010's initial Astra implementation and Sol production defaults.
 
-**Status:** active — cost/workflow refinement from this review
+**Status:** active for deterministic work and bounded consultation; the one-GM-first limitation is superseded by D-019
 
 ---
 
@@ -157,7 +157,7 @@ Historical discussion belongs in `docs/meetings/`. Technical detail may live in 
 
 **Supersedes:** D-001, D-004, D-012, and D-010's initial-implementation clause.
 
-**Status:** active
+**Status:** active for the local CLI/subscription architecture; the single-agent restriction is superseded by D-019
 **Source:** [Lean V1 review](meetings/2026-10-02-lean-v1-review.md)
 
 ---
@@ -178,7 +178,7 @@ Historical discussion belongs in `docs/meetings/`. Technical detail may live in 
 
 **Rationale:** With no hosted service there is little to monitor or repair; the Owner opens a coding agent when a tool breaks. Each deferred component adds operating cost before it adds football value.
 
-**Status:** active
+**Status:** specialist-agent deferral superseded by D-019; hosting and scheduled jobs remain deferred
 
 ---
 
@@ -192,5 +192,21 @@ Historical discussion belongs in `docs/meetings/`. Technical detail may live in 
 Off-limits: KeepTradeCut (scraping forbidden), RotoWire (terms effective 2026-09-19 prohibit use with AI tools, including storing its data), Dynasty Daddy (built on KTC scraping), DynastyProcess values (derived from scraped FantasyPros data). The GM charter repeats the off-limits list.
 
 **Rationale:** The project is public and run by AI agents; using data against its terms is a real risk. Verified from the providers' own docs and terms on 2026-10-02.
+
+**Status:** active
+
+---
+
+## D-019 — 2026-10-05 — Implement specialist staff now
+
+**Decision:** The Owner explicitly requested and approved real specialist agents now. The local Codex GM delegates to Research Boy, Superflex Dynasty Knower, League Watcher, Rookie Scout and AI Guru through native custom-agent configurations. Software Dev/SRE has a separate Owner-launched engineering entrypoint, never a football subagent.
+
+Version-controlled role prompts and registry generate trusted native role configurations in the private workspace at launch. Every football launch validates the league; specialists validate again before football analysis. The GM coordinates at most three simultaneous specialists and owns canonical notes; specialist evidence stays in separate private records. Scoring, lineup calculations, fetching and invariant validation remain deterministic tools.
+
+The football workspace cannot write engineering source. Engineering sessions may repair broken validation without giving football advice. No commits, pushes, merges, deployments, destructive actions, permission changes or new spend are authorized merely by invoking this staff. Owner authorization is required under the working agreement; D-008's protected-action policy remains.
+
+**Rationale:** Specialist staff are an explicit Owner requirement. The earlier sequencing preference must not block it. Keep subscription-backed local operation and permission separation while making delegation real and verifiable.
+
+**Supersedes:** the single-agent limitation in D-014/D-015 and agent deferral in D-017. Does not approve hosting, scheduling, new sources or API spend.
 
 **Status:** active

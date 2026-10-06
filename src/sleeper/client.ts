@@ -41,9 +41,9 @@ export function createSleeperClient(options: SleeperClientOptions = {}) {
   const retries = options.retries ?? 2;
   const sleep = options.sleep ?? ((ms) => new Promise((r) => setTimeout(r, ms)));
 
-  async function getJson(path: string): Promise<unknown> {
+  async function getJson(path: string, retryLimit = retries): Promise<unknown> {
     let lastError: unknown;
-    for (let attempt = 0; attempt <= retries; attempt++) {
+    for (let attempt = 0; attempt <= retryLimit; attempt++) {
       if (attempt > 0) await sleep(500 * 2 ** (attempt - 1));
       try {
         const res = await doFetch(`${baseUrl}${path}`, { signal: AbortSignal.timeout(timeoutMs) });
@@ -58,11 +58,11 @@ export function createSleeperClient(options: SleeperClientOptions = {}) {
         lastError = err; // network error or timeout: retry
       }
     }
-    throw new SleeperError(path, `failed after ${retries + 1} attempts`, { cause: lastError });
+    throw new SleeperError(path, `failed after ${retryLimit + 1} attempts`, { cause: lastError });
   }
 
-  async function get<S extends z.ZodType>(path: string, schema: S): Promise<z.infer<S>> {
-    const body = await getJson(path);
+  async function get<S extends z.ZodType>(path: string, schema: S, retryLimit = retries): Promise<z.infer<S>> {
+    const body = await getJson(path, retryLimit);
     const parsed = schema.safeParse(body);
     if (!parsed.success) {
       const issues = parsed.error.issues
@@ -85,7 +85,8 @@ export function createSleeperClient(options: SleeperClientOptions = {}) {
     drafts: (leagueId: string) => get(`/league/${leagueId}/drafts`, DraftsSchema),
     nflState: () => get(`/state/nfl`, NflStateSchema),
     userLeagues: (userId: string, season: string) => get(`/user/${userId}/leagues/nfl/${season}`, UserLeaguesSchema),
-    players: () => get(`/players/nfl`, PlayersSchema),
+    // The daily cache reservation permits one HTTP attempt, including failed downloads.
+    players: () => get(`/players/nfl`, PlayersSchema, 0),
     trending: (type: "add" | "drop", lookbackHours: number, limit: number) =>
       get(`/players/nfl/trending/${type}?lookback_hours=${lookbackHours}&limit=${limit}`, TrendingSchema),
   };

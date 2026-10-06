@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 set -euo pipefail
 here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
-exec "$here/node24" "$here/../src/gm-launcher.ts" gm "$@"
+exec "$here/node24" "$here/../src/gm-launcher.ts" dev "$@"
