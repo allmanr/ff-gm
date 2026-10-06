@@ -1,6 +1,6 @@
 # Football Front Office — Codex Agent Runtime
 
-> **Status (2026-10-02):** target architecture, not the V1 build list. V1 ([D-015](DECISIONS.md), [plan](IMPLEMENTATION_PLAN.md), [state](PROJECT_STATE.md)) is built: one GM in Codex launched by `bin/ff-gm`, the `ff` CLI with deterministic League Watcher, Quant (exact scoring, lineup optimizer), and Auditor (fail-closed validation) roles, and private data in `private/`. Research uses permitted sources only (D-018). The job queue, runner service, custom agent definitions, and Software Dev path remain deferred (D-017); add each piece when real use shows it is needed.
+> **Status (2026-10-05):** target architecture, not the remaining build list. The local CLI/GM foundation is built, and D-019 adds five real native football specialists plus a separately launched Software Dev/SRE session. Trusted role prompts and registry generate private native definitions; see the [plan](IMPLEMENTATION_PLAN.md) and [state](PROJECT_STATE.md) for current behavior. Quant and validation remain deterministic. Research uses permitted sources only (D-018). Database, job queue, runner service, hosting, notifications and autonomous merge/deploy orchestration remain future work; the staff do not require those services.
 
 The football front office will run using **native Codex agents and subagents authenticated through the Owner’s ChatGPT subscription**, rather than through the OpenAI Agents API.
 
