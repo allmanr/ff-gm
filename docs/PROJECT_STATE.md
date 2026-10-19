@@ -1,6 +1,6 @@
 # Project State
 
-**Last updated:** 2026-10-02 · **Branch:** `main` (V1 merged in [PR #2](https://github.com/allmanr/ff-gm/pull/2))
+**Last updated:** 2026-10-05 · **Branch:** `feature/specialist-agents` (V1 previously merged in [PR #2](https://github.com/allmanr/ff-gm/pull/2))
 
 ## Mission
 
@@ -8,15 +8,21 @@ A fantasy-football front office for Sleeper league `1314802188052090880`: win ga
 
 Expected invariants, verified live on every run: dynasty, Superflex, full PPR, TE reception bonus.
 
-## Current architecture (V1, D-015)
+## Current architecture (local front office, D-015 / D-019)
 
 - `bin/ff` — TypeScript CLI (Node 24 via `bin/node24`, no build step) over Sleeper's documented API. Every command validates the league and roster ownership first and fails closed (exit 1). 18 commands: context, standings, rosters, roster, picks, free-agents, trending, transactions, waivers, matchups, bench, schedule, player, values, trade, changes, history, help.
-- `bin/ff-gm` — runs `ff context`, writes the trusted charter to `private/AGENTS.md`, and starts Codex in `private/` with web search and sandboxed network. The validated constitution remains a separate data file; the charter treats external text as untrusted data. Default `gpt-6-sol`/high (D-010). `ff-gm ask "…"` and `ff-gm brief <war-room|recap|lineup|daily>` save answers to `private/reports/`.
+- `bin/ff-gm` — validates context, writes trusted charter/native specialist configuration, and starts the coordinating Codex GM in `private/`. Five native roles: Research Boy, Superflex Dynasty Knower, League Watcher, Rookie Scout and AI Guru; at most three simultaneous staff threads. Sol/high (D-010); validated constitution remains separate untrusted data. `ask`, `brief`, and direct `specialist <role> "…"` calls save unique reports and JSONL events privately. Specialists save evidence under `private/notes/staff/<role>/`; the GM owns canonical notes and the change baseline.
+- `bin/ff-dev` — separate Software Dev/SRE primary session rooted in the engineering repository. It can repair failed validation without giving football advice; no engineering role is registered with the GM. Engineering reports stay private. Protected and external actions still require explicit Owner authorization.
 - `private/` — gitignored; its own private GitHub repo `allmanr/ff-gm-private` (D-016).
 - External data (D-018): FantasyCalc market values; nflverse schedule, lines, weekly stats, and Sleeper-ID crosswalk. Supplementary: commands degrade with a note if unavailable.
-- No server, database, hosting, scheduler, or specialist subagents (D-017).
+- No server, database, hosting or scheduler (D-017). Specialist deferral is superseded by the Owner's explicit D-019 decision.
 
 ## Verification status
+
+- Specialist branch final gate: `npm run check` passes typecheck, lint, 187 offline tests across 14 files, and tracked/staged privacy checks. A separate scan of all 13 new public files passes; shell syntax and `git diff --check` pass.
+
+- Specialist integration: live native session metadata confirms all five named custom roles, Sol/high, private workspace/cache writes and approval policy `never`. Each ran `ff context`, read the constitution, completed its bounded assignment and saved a memo that the GM read. A separate live Software Dev/SRE session ran the repository checks; a final direct Research Boy call validated context and saved a unique memo through the completed launcher. OS sandbox probes allow private/cache writes and deny engineering-source and `.codex` writes. Evidence is in `private/evaluations/specialist-acceptance/`; this verifies wiring and bounded behavior, not long-term advice quality.
+- Live scoring verifier still refuses `st_ff, st_fum_rec` after the player-cache/client changes. That known source-coverage limitation remains; no scoring gate was weakened.
 
 - 2026-10-05 review follow-up: `npm run check` passes typecheck, lint, 128 tests, and privacy checks. One bounded live GM acceptance run completed; evidence and its coverage limits are retained under `private/evaluations/`. This is not a consistency benchmark. Deterministic regressions cover saved starters subsequently dropped or placed on Sleeper IR.
 - Final PR #2 pass: `npm run check` passes typecheck, lint, 124 tests, and the privacy scan of Git index blobs and working files. Tests inject supplementary fetchers; a global fetch guard fails any accidental network attempt, even if a command catches the error.
@@ -25,6 +31,9 @@ Expected invariants, verified live on every run: dynasty, Superflex, full PPR, T
 - Earlier live command and lineup-optimizer checks remain historical evidence; the final pass does not claim a fresh all-command live run.
 
 ## Done
+
+- Specialist staff (D-019): trusted versioned role prompts/registry, native delegation, direct specialist calls, independent private evidence records, separate engineering entrypoint, and private execution logs. Launcher rejects arbitrary Codex flags, traversing brief names, unsafe private roots, symlinked generated files and unexpected football-workspace agent definitions.
+- Parallel-operation fixes: shared player-download coordination with OS `flock`, bounded waits, crash release and daily attempt reservation (failed attempts included); no HTTP retry of the large player endpoint. Context writes refuse symlinks before any output is promoted, and the launcher checks those paths before validation can overwrite trusted instructions.
 
 - Docs reconciled to lean V1 (D-015–D-017); Owner identity verified and stored privately.
 - `ff` CLI with fail-closed gate; GM charter, launcher, and briefs; anonymized fixtures; CI; leak check.
@@ -49,6 +58,9 @@ Expected invariants, verified live on every run: dynasty, Superflex, full PPR, T
 - **FantasyCalc `te+`** — bonus size undocumented; mapped from the league's +0.5 and labeled → accept.
 
 ## Closed — don't reopen without new evidence
+
+- **Specialist deferral** → superseded by explicit Owner direction, implemented under D-019. Do not use the old V1 sequencing decision to defer staff again.
+- **Parallel player downloads and validation-output symlinks** → fixed for specialist operation; offline regressions cover real processes, crash release and protection of trusted targets.
 
 - **Saved lineup completeness and unavailable point comparisons** → fixed. Historical rows no longer disappear after roster changes, and the charter no longer requires nonexistent scoring evidence. Regression checks fail without the fixes.
 - Agents API runtime, Vercel/Postgres deployment, and owner-bootstrap UI for V1: replaced by D-015.

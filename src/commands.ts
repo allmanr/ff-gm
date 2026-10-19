@@ -1,5 +1,5 @@
-import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { assertPrivatePath, safeDirectory, safeWrite } from "./private-files.ts";
 import { paths } from "./config.ts";
 import { renderConstitution } from "./constitution.ts";
 import type { LeagueContext } from "./context.ts";
@@ -58,9 +58,10 @@ export async function contextCommand(session: Session, opts: Options): Promise<s
   const { ctx } = await session.data();
   const md = renderConstitution(ctx);
   if (opts.write !== false) {
-    mkdirSync(paths.privateDir, { recursive: true });
-    writeFileSync(join(paths.privateDir, "LEAGUE_CONSTITUTION.md"), md);
-    writeFileSync(join(paths.privateDir, "context.json"), `${JSON.stringify(ctx, null, 2)}\n`);
+    safeDirectory(paths.privateDir);
+    for (const file of ["LEAGUE_CONSTITUTION.md", "context.json"]) assertPrivatePath(join(paths.privateDir, file), false);
+    safeWrite(join(paths.privateDir, "LEAGUE_CONSTITUTION.md"), md);
+    safeWrite(join(paths.privateDir, "context.json"), `${JSON.stringify(ctx, null, 2)}\n`);
   }
   return md;
 }

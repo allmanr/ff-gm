@@ -1,6 +1,6 @@
 # Implementation plan
 
-**Updated:** 2026-10-02 · **Status:** Phases 1–3 built and verified (PR #2) · **Decisions:** [D-015](DECISIONS.md), [D-018](DECISIONS.md) · **Target architecture (later):** [IMPLEMENTATION_SPEC.md](IMPLEMENTATION_SPEC.md)
+**Updated:** 2026-10-05 · **Status:** Phases 1–3 built; specialist staff added under D-019 · **Decisions:** [D-015](DECISIONS.md), [D-018](DECISIONS.md), [D-019](DECISIONS.md) · **Target architecture (later):** [IMPLEMENTATION_SPEC.md](IMPLEMENTATION_SPEC.md)
 
 Build the smallest thing that gives the Owner validated football advice this season. Add the next piece only when its absence is felt in real use.
 
@@ -30,13 +30,21 @@ Every command validates the league and roster ownership before printing anything
 
 League Watcher (`ff changes`), league history, FantasyCalc values, NFL schedule and lines, observed waiver timing, nflverse scoring with source-coverage refusal (currently unavailable because `st_ff` and `st_fum_rec` are missing; the earlier 749/749 comparison assumed those keys were zero), lineup optimizer (matches Sleeper max PF).
 
-## Next — only when real use shows the need
+## Phase 4 — specialist staff (Owner approved, D-019)
+
+- Real native Codex roles: Research Boy, Superflex Dynasty Knower, League Watcher, Rookie Scout and AI Guru. The GM delegates bounded assignments, waits, reads evidence, resolves disagreements and owns canonical notes.
+- Trusted role prompts and a registry generate private native TOML configuration. Maximum three simultaneous staff threads; no recursive staff delegation. Direct calls use `ff-gm specialist <role> "task"`.
+- Separate Software Dev/SRE primary session through `ff-dev`, with engineering writes and no football advice while diagnosing validation failures. It is not registered as a GM subagent.
+- Private evidence directories per specialist; unique final reports and execution logs. Strict launcher arguments, symlink-safe validation/configuration writes and shared daily player-download coordination protect parallel operation.
+- Verification: offline launcher/permission/privacy/cache regressions, a live all-five-role delegation acceptance run, a separate live SRE run, and an OS sandbox probe. Private acceptance evidence stays under `private/evaluations/`.
+
+## Next — use the staff and fix demonstrated gaps
 
 1. Owner uses the GM weekly (`ff-gm brief war-room` on Tuesdays, `lineup` before kickoffs). Note what it gets wrong in `private/notes/`.
 2. Scheduled briefs with a notification channel, once the Owner picks one.
 3. Forward projections, if the GM's research proves insufficient (PROJECT_STATE lists the options).
 4. Optional review findings listed in PROJECT_STATE.
-5. Phone surface, hosting, and the SRE agent (D-017) — not before the above.
+5. Phone surface and hosting (D-017) — not before the above. Specialist staff and the separate SRE entrypoint are implemented under D-019.
 
 ## Working rules
 

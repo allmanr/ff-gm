@@ -10,7 +10,8 @@
   },
   "bin": {
     "ff": "./bin/ff",
-    "ff-gm": "./bin/ff-gm"
+    "ff-gm": "./bin/ff-gm",
+    "ff-dev": "./bin/ff-dev"
   },
   "scripts": {
     "ff": "bin/ff",
