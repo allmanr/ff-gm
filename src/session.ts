@@ -108,7 +108,7 @@ export function createSession(deps: SessionDeps) {
       });
       if (ageMs > PLAYER_DATA_WARN_MS) {
         notices.push(
-          `Sleeper player data (teams, injuries, depth charts) is ${Math.round(ageMs / 3_600_000)} hours old; the refresh failed.`,
+          `Sleeper player data (teams, injuries, depth charts) is ${Math.round(ageMs / 3_600_000)} hours old; a refresh failed or was already attempted within 24 hours.`,
         );
       }
       return db;

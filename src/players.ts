@@ -12,7 +12,7 @@ type CacheOptions = {
   cacheDir: string;
   fetchPlayers: () => Promise<Record<string, Player>>;
   now?: () => number;
-  /** Compatibility option: refresh requests still honor the daily download limit. */
+  /** Refresh requests honor the daily download limit, except with no usable cache (Owner recovery). */
   refresh?: boolean;
 };
 
@@ -75,7 +75,7 @@ export async function loadPlayerDb(opts: CacheOptions): Promise<{ players: Playe
     // Recheck after acquiring: another process may have refreshed while we were waiting.
     const cached = cachedResult();
     if (cached && cached.ageMs < PLAYER_CACHE_MAX_AGE_MS) return cached;
-    if (ageOf(attemptFile) < PLAYER_CACHE_MAX_AGE_MS) {
+    if (ageOf(attemptFile) < PLAYER_CACHE_MAX_AGE_MS && !(opts.refresh && !cached)) {
       if (cached) return cached;
       throw new Error("Sleeper players were already requested within 24 hours; no usable cache");
     }

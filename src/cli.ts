@@ -42,7 +42,7 @@ const HELP = `ff — validated Sleeper league data for the GM. Every command ver
   ff values [me|team] [--league]  dynasty market values (FantasyCalc) for a roster, or every team
   ff trade "<we give>" "<we get>"  market-value check, e.g. ff trade "Player A, 2027 R2" "Player B"
 
-  --refresh-players  refresh Sleeper's player database when its 24-hour cache expires
+  --refresh-players  refresh Sleeper's player database when its 24-hour cache expires, or retry a failed download when there is no cache
 
 Exit codes: 0 ok · 1 league validation failed (no football output) · 2 usage · 3 Sleeper/network error · 4 other error`;
 

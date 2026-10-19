@@ -105,7 +105,7 @@ Back up GM notes after sessions: `git -C private add -A && git -C private commit
 | Future pick ownership | `ff picks` |
 | A manager's trade history and tendencies | `ff history <manager>` |
 
-`ff help` lists every option. Exit codes: 0 ok · 1 league validation failed (no football output) · 2 usage · 3 Sleeper/network error · 4 other error. `--refresh-players` honors the same 24-hour cache as normal commands.
+`ff help` lists every option. Exit codes: 0 ok · 1 league validation failed (no football output) · 2 usage · 3 Sleeper/network error · 4 other error. `--refresh-players` honors the same 24-hour cache as normal commands; with no usable cache it retries a download that failed earlier that day.
 
 ## Current limitations
 
@@ -114,7 +114,7 @@ Tracked with impact and verdict under Open in [Project state](docs/PROJECT_STATE
 - **No PPG or last-3 numbers.** nflverse scoring refuses any active rule the source cannot supply, and this league enables `st_ff` and `st_fum_rec`. The `ff free-agents` PPG/L3 columns are blank, `--sort ppg` falls back to market value, and `npm run verify-scoring` exits nonzero. Sleeper's own weekly points (`ff roster`, `matchups`, `bench`, `player`) are exact.
 - **No projections.** Start/sit advice comes from the GM's web research and implied team totals.
 - **`ff trade` checks market value only.** It does not check roster fit or that each asset is on the side you named; read the "On roster" column.
-- **Market values** refresh at most once an hour (FantasyCalc's terms). Player downloads are coordinated across parallel agents and attempted at most once per 24 hours, including failures; a failed refresh uses a valid stale cache when available.
+- **Market values** refresh at most once an hour (FantasyCalc's terms). Player downloads are coordinated across parallel agents and attempted at most once per 24 hours, including failures (`--refresh-players` can retry when no cache exists); a failed refresh uses a valid stale cache when available.
 - **No scheduling.** Briefs run when you run them.
 
 ## Data sources

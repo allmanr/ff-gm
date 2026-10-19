@@ -105,6 +105,27 @@ describe("parallel player refresh", () => {
     expect(retry).not.toHaveBeenCalled();
   });
 
+  it("lets an explicit refresh retry a failed cold refresh when no cache exists", async () => {
+    const { cacheDir } = setup();
+    await expect(loadPlayerDb({ cacheDir, fetchPlayers: async () => { throw new Error("offline"); } })).rejects.toThrow("offline");
+    const retry = vi.fn(async () => players);
+    const result = await loadPlayerDb({ cacheDir, fetchPlayers: retry, refresh: true });
+    expect(retry).toHaveBeenCalledTimes(1);
+    expect(result.refreshed).toBe(true);
+  });
+
+  it("keeps the daily limit for an explicit refresh when a stale cache exists", async () => {
+    const { cacheDir, file } = setup();
+    writeFileSync(file, JSON.stringify(players));
+    const old = (Date.now() - 2 * PLAYER_CACHE_MAX_AGE_MS) / 1000;
+    utimesSync(file, old, old);
+    writeFileSync(`${file}.attempt`, "recent\n");
+    const retry = vi.fn(async () => players);
+    const result = await loadPlayerDb({ cacheDir, fetchPlayers: retry, refresh: true });
+    expect(retry).not.toHaveBeenCalled();
+    expect(result.refreshed).toBe(false);
+  });
+
   it("automatically releases a crashed process lock and retains its request reservation", async () => {
     const { cacheDir, file } = setup();
     const moduleUrl = pathToFileURL(join(import.meta.dirname, "../src/players.ts")).href;

@@ -185,11 +185,17 @@ console.log(JSON.stringify({ type: "thread.started", thread_id: "offline-test" }
     expect(existsSync(join(repo, "SHOULD_NOT_EXIST"))).toBe(false);
   });
 
+  it("joins an unquoted question into one literal prompt", () => {
+    const { repo, env } = launch();
+    expect(run(repo, env, ["ask", "who", "should", "I", "start"]).status).toBe(0);
+    expect(captured(repo).slice(-2)).toEqual(["--", "who should I start"]);
+  });
+
   it.each([
     ["--dangerously-bypass-approvals-and-sandbox"], ["-C", "/tmp"], ["--add-dir", "/tmp"],
     ["-c", 'sandbox_mode="danger-full-access"'], ["brief", "../CHARTER"], ["brief", "lineup", "extra"],
     ["specialist", "software_dev", "repair"], ["specialist", "../software_dev", "repair"],
-    ["ask"], ["ask", " "], ["ask", "one", "two"],
+    ["ask"], ["ask", " "], ["ask", " ", " "],
   ])("rejects unsafe or malformed arguments %j before running Codex", (...args) => {
     const { repo, env } = launch();
     expect(run(repo, env, args).status).toBe(2);

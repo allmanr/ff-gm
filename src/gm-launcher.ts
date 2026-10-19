@@ -24,7 +24,7 @@ function main(): number {
   let label = "";
   let role: typeof staff[number] | undefined;
   if (argv.length === 0) { /* Interactive. */ }
-  else if (argv[0] === "ask" && argv.length === 2 && argv[1]?.trim()) prompt = argv[1];
+  else if (argv[0] === "ask" && argv.slice(1).join(" ").trim()) prompt = argv.slice(1).join(" ");
   else if (!engineering && argv[0] === "brief" && argv.length === 2 && briefs.includes(argv[1]!)) {
     prompt = readFileSync(join(repo, "gm/briefs", `${argv[1]}.md`), "utf8");
     label = `-${argv[1]}`;
