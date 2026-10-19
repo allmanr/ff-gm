@@ -210,3 +210,13 @@ The football workspace cannot write engineering source. Engineering sessions may
 **Supersedes:** the single-agent limitation in D-014/D-015 and agent deferral in D-017. Does not approve hosting, scheduling, new sources or API spend.
 
 **Status:** active
+
+---
+
+## D-020 — 2026-10-19 — Manual player-data recovery on a cold cache
+
+**Decision:** Sleeper's `/players/nfl` stays at most one attempt per 24 hours, failed attempts included, with one exception: an explicit `--refresh-players` may retry when no usable player cache exists.
+
+**Rationale:** Sleeper asks that the ~5 MB map be called "once per day at most". The exception cannot produce more than one successful download per day, because a success creates the cache and ends it. Most failures (DNS, timeouts, outages) transfer little. Without it, one failed first download blocks every player command for a day. The remaining repeat-download case (payload fails schema validation) requires the Owner to pass the flag each time.
+
+**Status:** active

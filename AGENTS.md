@@ -31,7 +31,7 @@ Enforcement is mechanical, not a prompt: every `ff` data command validates the l
 - `position` is the primary position only; `fantasy_positions` lists every position a player can fill (Travis Hunter: DB, eligible at WR; fullbacks: FB, eligible at RB). Use `src/positions.ts` for eligibility.
 - Offseason and preseason transactions are filed under week 1; use `session.transactionWeeks()` when reading transactions.
 - `matchup_id` is null for teams without a game; never pair two nulls.
-- `/players/nfl` is ~5 MB; fetch at most once per day (cached under `.local/cache/`).
+- `/players/nfl` is ~5 MB; fetch at most once per day (cached under `.local/cache/`). Only exception: manual `--refresh-players` with no usable cache (D-020).
 - Use only the documented HTTP API at docs.sleeper.com. No undocumented endpoints or WebSockets.
 
 ## Private data — the repository is public
