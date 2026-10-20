@@ -64,6 +64,11 @@ console.log(JSON.stringify({ type: "thread.started", thread_id: "offline-test" }
     expect(instructions).toContain("explicitly report the points comparison as unavailable");
     expect(instructions).toContain("unavailable data does not mean zero gain and does not prevent a recommendation");
     expect(instructions).toContain("label any production estimate separately with its source, date, assumptions, and uncertainty");
+    expect(instructions).toContain("Recommendation preflight");
+    expect(instructions).toContain("Compare the proposed starter against our meaningful current bench options");
+    expect(instructions).toContain("best reason to decline or use a free alternative");
+    expect(instructions).toContain("TRADE — MEDIUM PRIORITY");
+    expect(instructions).toContain("Preflight verification:");
     for (const file of readdirSync(join(repo, "private/.codex/agents"))) {
       const definition = readFileSync(join(repo, "private/.codex/agents", file), "utf8");
       expect(definition).not.toContain(attack);

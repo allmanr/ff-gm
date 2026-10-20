@@ -171,7 +171,7 @@ describe("second review regressions", () => {
     const out = await valuesCommand(session, "me", {});
     expect(out).toMatch(/WR82/);
     expect(out).toMatch(/Totals: players 937 \(QB 0, RB 0, WR 937, TE 0\)/);
-    expect(await tradeCommand(session, name, "2027 1st")).toContain(`${name} WR-`);
+    expect(await tradeCommand(session, name, "2027 1st", "2")).toContain(`${name} WR-`);
   });
 
   it("keeps multi-position players in the schedule table and the lineup optimizer", async () => {

@@ -23,6 +23,7 @@ export type Options = {
   write?: boolean;
   league?: boolean;
   sort?: "value" | "ppg";
+  with?: string;
 };
 
 export class UsageError extends Error {
