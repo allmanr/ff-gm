@@ -40,17 +40,9 @@ League Watcher (`ff changes`), league history, FantasyCalc values, NFL schedule 
 
 ## Next engineering work
 
-Use the ordered ticket queue in [PROJECT_STATE.md](PROJECT_STATE.md#recommended-engineering-queue-checked-2026-10-20). Recommended order is #6, #8, #7, #10, then #9. Refresh #11 alongside the first implementation. This is a backlog recommendation, not authorization to commit, push, or close tickets.
+Use the ordered ticket queue in [PROJECT_STATE.md](PROJECT_STATE.md#recommended-engineering-queue-checked-2026-10-20). Recommended order is #8, #7, #10, then #9. Refresh #11 alongside the first implementation. This is a backlog recommendation, not authorization to commit, push, or close tickets. Issue #6 is implemented in PR #12.
 
-Start with [issue #6](https://github.com/allmanr/ff-gm/issues/6).
-
-1. Read `AGENTS.md`, `docs/PROJECT_STATE.md`, `docs/DECISIONS.md`, and the issue acceptance criteria. Inspect `git status --short` and preserve existing documentation edits.
-2. Create a feature branch before implementation. Preserve the untracked session export under `private/` without printing or copying its contents into public artifacts. Do not stage it.
-3. Inspect `scripts/check-leaks.ts`, `test/scripts.test.ts`, `package.json`, and `.github/workflows/ci.yml`. Add a deterministic artifact guard that works without private context. An ignore rule alone cannot prevent a forced add.
-4. Prove with anonymous temporary repositories that staged and committed exports fail, including a CI-style checkout without `private/`. Keep existing identifier and staged-blob regression coverage.
-5. Run `npm run check` and `git diff --check`. Update the single current-status document with observed results. Review the public diff for private data before any authorized commit.
-
-Done for #6 means the export is preserved privately, both regression cases fail before the fix and pass afterward, and the normal public tree passes the full gate. Issue bodies define the remaining acceptance criteria. Do not claim #6 or #11 closed from this documentation update alone.
+Start with [issue #8](https://github.com/allmanr/ff-gm/issues/8). Issue bodies define the remaining acceptance criteria. Do not claim tickets closed from documentation updates alone.
 
 ## Deferred product work
 
