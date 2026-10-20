@@ -304,19 +304,110 @@ console.log(JSON.stringify({ type: "thread.started", thread_id: "offline-test" }
 
 describe("privacy leak check", () => {
   const identifier = "synthetic-private-identifier-93627";
-  function setup() {
+  function setup(withContext = true) {
     const repo = sandbox();
     copyFileSync(join(repoRoot, "scripts/check-leaks.ts"), join(repo, "scripts/check-leaks.ts"));
     copyFileSync(join(repoRoot, "src/config.ts"), join(repo, "src/config.ts"));
     symlinkSync(join(repoRoot, "node_modules"), join(repo, "node_modules"), "dir");
     writeFileSync(join(repo, "package.json"), '{"type":"module"}');
-    writeFileSync(join(repo, "private/context.json"), JSON.stringify({ leagueName: identifier, divisions: {}, teams: [] }));
+    writeFileSync(join(repo, ".gitignore"), "private/\n.local/\nnode_modules/\n");
+    if (withContext) writeFileSync(join(repo, "private/context.json"), JSON.stringify({ leagueName: identifier, divisions: {}, teams: [] }));
     const git = (...args: string[]) => execFileSync("git", args, { cwd: repo });
-    const check = () => spawnSync(process.execPath, [join(repo, "scripts/check-leaks.ts")], {
-      env: { ...process.env, FF_PRIVATE_DIR: join(repo, "private") }, encoding: "utf8",
+    const check = (checkout = repo) => spawnSync(process.execPath, [join(checkout, "scripts/check-leaks.ts")], {
+      env: { ...process.env, FF_PRIVATE_DIR: join(checkout, "private") }, encoding: "utf8",
     });
     return { repo, git, check };
   }
+
+  it.each(["sanitized", "removed"])("rejects a staged session export without context when the working copy is %s", (state) => {
+    const { repo, git, check } = setup(false);
+    const name = "codex-session-synthetic-private-title.md";
+    const file = join(repo, name);
+    writeFileSync(file, "Synthetic confidential strategy");
+    git("add", "--", name);
+    if (state === "removed") rmSync(file);
+    else writeFileSync(file, "safe data");
+    const result = check();
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("session export (index)");
+    expect(result.stderr).not.toContain(name);
+    expect(result.stderr).not.toContain("Synthetic confidential strategy");
+  });
+
+  it("rejects a committed export in a cloned checkout without private context", () => {
+    const { repo, git, check } = setup(false);
+    const name = "codex-session-synthetic-private-title.md";
+    writeFileSync(join(repo, name), "Synthetic confidential strategy");
+    git("add", ".gitignore", "package.json", "scripts/check-leaks.ts", "src/config.ts", name);
+    git("-c", "user.name=Anonymous Test", "-c", "user.email=test@example.invalid", "commit", "-qm", "Synthetic export regression");
+    const checkout = join(repo, "checkout");
+    git("clone", "-q", "--no-local", repo, checkout);
+    symlinkSync(join(repoRoot, "node_modules"), join(checkout, "node_modules"), "dir");
+    expect(existsSync(join(checkout, "private"))).toBe(false);
+    const result = check(checkout);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("session export (index)");
+    expect(result.stderr).not.toContain(name);
+    expect(result.stderr).not.toContain("Synthetic confidential strategy");
+  });
+
+  it("rejects a visible untracked export without revealing its filename or contents", () => {
+    const { repo, check } = setup(false);
+    const name = "codex-session-synthetic\nprivate\ttitle.jsonl";
+    writeFileSync(join(repo, name), "Synthetic confidential strategy");
+    const result = check();
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("session export (untracked)");
+    expect(result.stderr).not.toContain("synthetic");
+    expect(result.stderr).not.toContain("Synthetic confidential strategy");
+  });
+
+  it.each([
+    "private/synthetic-secret.md", ".local/synthetic-secret.md", "notes/synthetic-secret.md",
+    "reports/synthetic-secret.md", "snapshots/synthetic-secret.json", "session-exports/synthetic-secret.md",
+    "owner.json", "context.json", "LEAGUE_CONSTITUTION.md",
+    "docs/codex-session-synthetic.md", "docs/codex-session-synthetic.txt", "docs/codex-session-synthetic.json",
+    "docs/codex-session-synthetic.jsonl", "docs/codex-session-synthetic.html", "docs/synthetic.events.jsonl",
+  ])("rejects a forced-added private artifact at %s without context", (name) => {
+    const { repo, git, check } = setup(false);
+    mkdirSync(dirname(join(repo, name)), { recursive: true });
+    writeFileSync(join(repo, name), "Synthetic confidential strategy");
+    git("add", "-f", "--", name);
+    const result = check();
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("(index)");
+    expect(result.stderr).not.toContain(name);
+    expect(result.stderr).not.toContain("Synthetic confidential strategy");
+  });
+
+  it("rejects a private gitlink before attempting to read it as a blob", () => {
+    const { git, check } = setup(false);
+    git("add", "package.json");
+    git("-c", "user.name=Anonymous Test", "-c", "user.email=test@example.invalid", "commit", "-qm", "Synthetic baseline");
+    const oid = git("rev-parse", "HEAD").toString().trim();
+    git("update-index", "--add", "--cacheinfo", `160000,${oid},private`);
+    const result = check();
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("private artifact directory (index)");
+    expect(result.stderr).not.toContain("cat-file");
+    expect(result.stderr).not.toContain(oid);
+  });
+
+  it("checks a clean public tree without private context and permits ordinary source and fixture names", () => {
+    const { repo, git, check } = setup(false);
+    rmSync(join(repo, "private"), { recursive: true });
+    const safe = ["src/session.ts", "test/session.test.ts", "test/fixtures/context.json", "docs/notes.md", "docs/reports/example.md", "docs/codex-session-format.md.txt.ts"];
+    for (const name of safe) {
+      mkdirSync(dirname(join(repo, name)), { recursive: true });
+      writeFileSync(join(repo, name), "safe data");
+    }
+    git("add", "--", ...safe);
+    const result = check();
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("artifact path checks passed");
+    expect(result.stdout).toContain("identifier scan unavailable");
+    expect(result.stdout).not.toContain("skipped");
+  });
 
   it.each(["sanitized", "removed"])("rejects a staged identifier when the working copy is %s", (state) => {
     const { repo, git, check } = setup();
@@ -349,6 +440,18 @@ describe("privacy leak check", () => {
     git("add", "--", name);
     writeFileSync(join(repo, name), "safe data");
     expect(check().status).toBe(1);
+  });
+
+  it("redacts private identifiers embedded in diagnostic filenames", () => {
+    const { repo, git, check } = setup();
+    const name = `${identifier}.txt`;
+    writeFileSync(join(repo, name), identifier);
+    git("add", "--", name);
+    const result = check();
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("(index)");
+    expect(result.stderr).toContain("(working tree)");
+    expect(result.stderr).not.toContain(identifier);
   });
 });
 

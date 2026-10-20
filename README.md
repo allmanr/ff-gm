@@ -130,4 +130,6 @@ Tracked with impact and verdict under Open in [Project state](docs/PROJECT_STATE
 - [Project state](docs/PROJECT_STATE.md) · [Plan](docs/IMPLEMENTATION_PLAN.md) · [Decisions](docs/DECISIONS.md) · [Engineering instructions](AGENTS.md)
 - [Target architecture](docs/IMPLEMENTATION_SPEC.md) (later phases) · [Meeting index](docs/MEETING_NOTES.md)
 
-Do not commit credentials, Owner identity, strategy, or GM output. Test fixtures are anonymized by `npm run record-fixtures`.
+Do not commit credentials, Owner identity, strategy, or GM output. Save session exports and transcripts under `private/session-exports/`. Keep GM notes, reports, and recommendation history under `private/`. Never save these artifacts in the public source tree, even temporarily. Test fixtures are anonymized by `npm run record-fixtures`.
+
+`npm run check-leaks` rejects known private artifact paths and recognizable session exports without needing private league context, including files forced into the Git index. When `private/context.json` is available, it also scans index blobs and tracked working files for private league identifiers. These checks do not detect arbitrary strategy text saved under an unrelated filename. Review the public diff before committing.

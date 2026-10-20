@@ -1,6 +1,6 @@
 # Implementation plan
 
-**Updated:** 2026-10-05 · **Status:** Phases 1–3 built; specialist staff added under D-019 · **Decisions:** [D-015](DECISIONS.md), [D-018](DECISIONS.md), [D-019](DECISIONS.md) · **Target architecture (later):** [IMPLEMENTATION_SPEC.md](IMPLEMENTATION_SPEC.md)
+**Updated:** 2026-10-20 · **Status:** Phases 1–3 built; specialist staff added under D-019 · **Decisions:** [D-015](DECISIONS.md), [D-018](DECISIONS.md), [D-019](DECISIONS.md) · **Target architecture (later):** [IMPLEMENTATION_SPEC.md](IMPLEMENTATION_SPEC.md)
 
 Build the smallest thing that gives the Owner validated football advice this season. Add the next piece only when its absence is felt in real use.
 
@@ -38,13 +38,17 @@ League Watcher (`ff changes`), league history, FantasyCalc values, NFL schedule 
 - Private evidence directories per specialist; unique final reports and execution logs. Strict launcher arguments, symlink-safe validation/configuration writes and shared daily player-download coordination protect parallel operation.
 - Verification: offline launcher/permission/privacy/cache regressions, a live all-five-role delegation acceptance run, a separate live SRE run, and an OS sandbox probe. Private acceptance evidence stays under `private/evaluations/`.
 
-## Next — use the staff and fix demonstrated gaps
+## Next engineering work
 
-1. Owner uses the GM weekly (`ff-gm brief war-room` on Tuesdays, `lineup` before kickoffs). Note what it gets wrong in `private/notes/`.
-2. Scheduled briefs with a notification channel, once the Owner picks one.
-3. Forward projections, if the GM's research proves insufficient (PROJECT_STATE lists the options).
-4. Optional review findings listed in PROJECT_STATE.
-5. Phone surface and hosting (D-017) — not before the above. Specialist staff and the separate SRE entrypoint are implemented under D-019.
+Use the ordered ticket queue in [PROJECT_STATE.md](PROJECT_STATE.md#recommended-engineering-queue-checked-2026-10-20). Recommended order is #8, #7, #10, then #9. Refresh #11 alongside the first implementation. This is a backlog recommendation, not authorization to commit, push, or close tickets. Issue #6 is implemented in PR #12.
+
+Start with [issue #8](https://github.com/allmanr/ff-gm/issues/8). Issue bodies define the remaining acceptance criteria. Do not claim tickets closed from documentation updates alone.
+
+## Deferred product work
+
+The Owner continues manual weekly use with `ff-gm brief war-room` and `ff-gm brief lineup`. Keep football findings in `private/notes/`.
+
+Scheduled briefs still need a notification-channel decision and evidence of recurring use. Projections remain deferred until research proves insufficient. Phone access and hosting remain deferred under D-017. The existing scoring-source gap stays open without weakening scoring refusal or adding an unapproved source.
 
 ## Working rules
 
