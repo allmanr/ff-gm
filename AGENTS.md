@@ -46,7 +46,7 @@ Enforcement is mechanical, not a prompt: every `ff` data command validates the l
 - Deterministic code for fetching, diffing, math, and validation; the LLM handles judgment and communication.
 - Tests must not hit the network. Add a test for every bug fixed.
 - Keep it boring: no server, database, queue, or framework until a concrete need is recorded in `docs/PROJECT_STATE.md`.
-- Commit on a feature branch with coherent messages. `npm run check` (typecheck, lint, tests, leak check) must pass before commit. After scoring or data-source changes, run `npm run verify-scoring` (live; engine vs Sleeper's points must match).
+- Always commit on a feature branch; never push commits directly to `main`. Every change lands on `main` via pull request squashed and merged (`gh pr merge --squash`), keeping `main` history to one clean commit per merged change. `npm run check` (typecheck, lint, tests, leak check) must pass before commit. After scoring or data-source changes, run `npm run verify-scoring` (live; engine vs Sleeper's points must match).
 
 ## Deferred, not rejected
 
