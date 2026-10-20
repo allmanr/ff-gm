@@ -38,7 +38,7 @@ Expected invariants, verified live on every run: dynasty, Superflex, full PPR, T
 
 ## Done
 
-- [Issue #8, trade ownership and advice preflight](https://github.com/allmanr/ff-gm/issues/8): `ff trade` enforces ownership of "we give" assets, validates that "we get" assets are held by the counterparty or available, resolves draft picks to unambiguous owned picks with original team tracking, and accepts `--with <team>` or positional counterparty without silent guessing. Added the recommendation preflight and reviewed trade example to `gm/CHARTER.md` and `gm/briefs/war-room.md`, separating market prices, recorded actual points, and forward estimates while comparing against bench replacements and counterparty decline incentives.
+- [Issue #8, trade ownership and advice preflight](https://github.com/allmanr/ff-gm/issues/8): `ff trade` enforces ownership of "we give" assets, validates that "we get" assets are held by the counterparty (free agents are rejected), resolves draft picks to unambiguous owned picks with original team tracking, and takes the counterparty from `--with <team>` or the get-side players, refusing to guess. Merged in [PR #14](https://github.com/allmanr/ff-gm/pull/14). Added the recommendation preflight and reviewed trade example to `gm/CHARTER.md` and `gm/briefs/war-room.md`, separating market prices, recorded actual points, and forward estimates while comparing against bench replacements and counterparty decline incentives.
 
 - [Issue #6, private session export guard](https://github.com/allmanr/ff-gm/issues/6): merged in [PR #12](https://github.com/allmanr/ff-gm/pull/12). Artifact-path checks run without private context, and existing identifier and staged-blob checks remain. The README documents private export storage and the limit on detecting arbitrarily renamed strategy text. The plan advances to issue #8; ticket closed on merge.
 
@@ -59,7 +59,7 @@ Expected invariants, verified live on every run: dynasty, Superflex, full PPR, T
 
 ### Recommended engineering queue, checked 2026-10-20
 
-This order is an engineering recommendation. Issue #6 was resolved in [PR #12](https://github.com/allmanr/ff-gm/pull/12); Issue #8 is implemented on branch `fix/issue-8-trade-sides-preflight`. The remaining implementation queue follows.
+This order is an engineering recommendation. Issue #6 was resolved in [PR #12](https://github.com/allmanr/ff-gm/pull/12); Issue #8 was resolved in [PR #14](https://github.com/allmanr/ff-gm/pull/14). The remaining implementation queue follows.
 
 | Order | Ticket | Impact and verdict | Evidence and scope |
 |---|---|---|---|

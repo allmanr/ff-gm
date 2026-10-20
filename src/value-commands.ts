@@ -140,26 +140,8 @@ function parsePickSpec(spec: string, db: PlayerDb): ParsedPickSpec | null {
   return null;
 }
 
-function resolveTeamRef(specOrig: string, ctx: LeagueContext, contextText: string): number {
-  const trimmed = specOrig.trim();
-  if (/^\d+$/.test(trimmed) && Number(trimmed) <= ctx.teams.length) {
-    const byId = ctx.teams.find((t) => t.rosterId === Number(trimmed));
-    if (byId) return byId.rosterId;
-  }
-  const q = trimmed.toLowerCase();
-  const matches = ctx.teams.filter(
-    (t) => t.managerName.toLowerCase().includes(q) || (t.teamName ?? "").toLowerCase().includes(q),
-  );
-  if (matches.length === 1) return matches[0]!.rosterId;
-  if (matches.length > 1) {
-    throw new UsageError(
-      `Original team "${trimmed}" in "${contextText}" matches multiple teams: ${matches.map((t) => shortTeam(ctx, t.rosterId)).join(", ")}`,
-    );
-  }
-  throw new UsageError(`Unknown original team "${trimmed}" in "${contextText}". Teams: ${ctx.teams.map((t) => shortTeam(ctx, t.rosterId)).join(", ")}`);
-}
-
-function resolvePickAsset(
+async function resolvePickAsset(
+  session: Session,
   spec: string,
   parsed: ParsedPickSpec,
   holderRosterId: number,
@@ -167,8 +149,7 @@ function resolvePickAsset(
   ctx: LeagueContext,
   allPicks: PickOwnership[],
   book: ValueBook,
-  ownerRosterId: number,
-): TradeAsset {
+): Promise<TradeAsset> {
   const holderLabel = isOwner ? "we" : shortTeam(ctx, holderRosterId);
   const candidatePicks = allPicks.filter(
     (p) => p.ownerRosterId === holderRosterId && p.season === parsed.season && p.round === parsed.round,
@@ -190,15 +171,8 @@ function resolvePickAsset(
 
   let matched: PickOwnership | undefined;
   if (parsed.origSpec) {
-    const lower = parsed.origSpec.toLowerCase();
-    let expectedOrigId: number;
-    if (lower === "own") {
-      expectedOrigId = holderRosterId;
-    } else if (lower === "me" || lower === "us" || lower === "our") {
-      expectedOrigId = ownerRosterId;
-    } else {
-      expectedOrigId = resolveTeamRef(parsed.origSpec, ctx, spec);
-    }
+    const expectedOrigId =
+      parsed.origSpec.toLowerCase() === "own" ? holderRosterId : (await resolveRoster(session, parsed.origSpec)).roster_id;
     matched = candidatePicks.find((p) => p.originalRosterId === expectedOrigId);
     if (!matched) {
       throw new UsageError(
@@ -265,7 +239,7 @@ export async function tradeCommand(
   session: Session,
   give: string | undefined,
   get: string | undefined,
-  targetOrOpts?: string | (Options & { with?: string }),
+  counterparty?: string,
 ) {
   if (!give || !get) {
     throw new UsageError(
@@ -279,14 +253,22 @@ export async function tradeCommand(
   const holderOf = new Map<string, number>();
   for (const r of rosters) for (const id of rosterPlayerIds(r)) holderOf.set(id, r.roster_id);
 
+  // Only another roster can send us a player: free agents are waiver claims, not trade assets.
+  const gettableHolder = (player: { label: string; holderId?: number | undefined }): number => {
+    if (player.holderId === ownerRosterId) throw new UsageError(`Cannot get ${player.label}: already on our roster.`);
+    if (player.holderId === undefined) {
+      throw new UsageError(`Cannot get ${player.label}: free agent, not a trade asset. Claim free agents on waivers.`);
+    }
+    return player.holderId;
+  };
+
   const rawGiveSpecs = parseAssets(give);
   const rawGetSpecs = parseAssets(get);
 
   // 1. Determine counterparty
   let targetRoster: Roster | undefined;
-  const targetSpec = typeof targetOrOpts === "string" ? targetOrOpts : targetOrOpts?.with;
-  if (targetSpec) {
-    targetRoster = await resolveRoster(session, targetSpec);
+  if (counterparty) {
+    targetRoster = await resolveRoster(session, counterparty);
     if (targetRoster.roster_id === ownerRosterId) {
       throw new UsageError("Trade counterparty cannot be our own roster.");
     }
@@ -297,12 +279,7 @@ export async function tradeCommand(
       const pick = parsePickSpec(spec, db);
       if (!pick) {
         const player = resolvePlayerAsset(spec, db, ctx, book, holderOf);
-        if (player.holderId === ownerRosterId) {
-          throw new UsageError(`Cannot get ${player.label}: already on our roster.`);
-        }
-        if (player.holderId !== undefined) {
-          oppHolders.add(player.holderId);
-        }
+        oppHolders.add(gettableHolder(player));
       }
     }
     if (oppHolders.size > 1) {
@@ -323,10 +300,10 @@ export async function tradeCommand(
   }
 
   // 2. Resolve "we give" assets
-  const giveAssets: TradeAsset[] = rawGiveSpecs.map((spec) => {
+  const giveAssets: TradeAsset[] = await Promise.all(rawGiveSpecs.map(async (spec) => {
     const pick = parsePickSpec(spec, db);
     if (pick) {
-      return resolvePickAsset(spec, pick, ownerRosterId, true, ctx, picks, book, ownerRosterId);
+      return resolvePickAsset(session, spec, pick, ownerRosterId, true, ctx, picks, book);
     }
     const player = resolvePlayerAsset(spec, db, ctx, book, holderOf);
     if (player.holderId !== ownerRosterId) {
@@ -338,29 +315,27 @@ export async function tradeCommand(
       value: player.value,
       holder: shortTeam(ctx, ownerRosterId),
     };
-  });
+  }));
 
   // 3. Resolve "we get" assets
-  const getAssets: TradeAsset[] = rawGetSpecs.map((spec) => {
+  const getAssets: TradeAsset[] = await Promise.all(rawGetSpecs.map(async (spec) => {
     const pick = parsePickSpec(spec, db);
     if (pick) {
-      return resolvePickAsset(spec, pick, targetRoster.roster_id, false, ctx, picks, book, ownerRosterId);
+      return resolvePickAsset(session, spec, pick, targetRoster.roster_id, false, ctx, picks, book);
     }
     const player = resolvePlayerAsset(spec, db, ctx, book, holderOf);
-    if (player.holderId === ownerRosterId) {
-      throw new UsageError(`Cannot get ${player.label}: already on our roster.`);
-    }
-    if (player.holderId !== undefined && player.holderId !== targetRoster.roster_id) {
+    const holderId = gettableHolder(player);
+    if (holderId !== targetRoster.roster_id) {
       throw new UsageError(
-        `Cannot get ${player.label}: held by ${shortTeam(ctx, player.holderId)}, not ${shortTeam(ctx, targetRoster.roster_id)}.`,
+        `Cannot get ${player.label}: held by ${shortTeam(ctx, holderId)}, not ${shortTeam(ctx, targetRoster.roster_id)}.`,
       );
     }
     return {
       label: player.label,
       value: player.value,
-      holder: player.holderId === undefined ? "free agent" : shortTeam(ctx, targetRoster.roster_id),
+      holder: shortTeam(ctx, targetRoster.roster_id),
     };
-  });
+  }));
 
   const sum = (xs: TradeAsset[]) => xs.reduce((a, x) => a + (x.value ?? 0), 0);
   const side = (title: string, xs: TradeAsset[]) => [

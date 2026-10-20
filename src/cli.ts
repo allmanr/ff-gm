@@ -92,15 +92,7 @@ function parseOptions(argv: string[]) {
     if (values.sort !== "value" && values.sort !== "ppg") throw new UsageError("--sort must be value or ppg");
     opts.sort = values.sort;
   }
-  return {
-    command: positionals[0],
-    arg: positionals[1],
-    arg2: positionals[2],
-    arg3: positionals[3],
-    opts,
-    help: values.help,
-    refreshPlayers: values["refresh-players"],
-  };
+  return { command: positionals[0], arg: positionals[1], arg2: positionals[2], opts, help: values.help, refreshPlayers: values["refresh-players"] };
 }
 
 export async function run(
@@ -109,7 +101,6 @@ export async function run(
   arg2: string | undefined,
   opts: Options,
   session: Session,
-  arg3?: string,
 ) {
   switch (command) {
     case "context":
@@ -146,13 +137,8 @@ export async function run(
       return changesCommand(session, opts);
     case "values":
       return valuesCommand(session, arg, opts);
-    case "trade": {
-      const withTarget = opts.with ?? arg3;
-      if (opts.with && arg3 && opts.with !== arg3) {
-        throw new UsageError(`Conflicting counterparty: --with "${opts.with}" and positional "${arg3}"`);
-      }
-      return tradeCommand(session, arg, arg2, withTarget ? { ...opts, with: withTarget } : opts);
-    }
+    case "trade":
+      return tradeCommand(session, arg, arg2, opts.with);
     default:
       throw new UsageError(command ? `Unknown command "${command}".\n\n${HELP}` : HELP);
   }
@@ -172,7 +158,7 @@ async function main(): Promise<number> {
   }
   const session = createSession({ client: createSleeperClient(), refreshPlayers: parsed.refreshPlayers ?? false });
   try {
-    const output = await run(parsed.command, parsed.arg, parsed.arg2, parsed.opts, session, parsed.arg3);
+    const output = await run(parsed.command, parsed.arg, parsed.arg2, parsed.opts, session);
     const notices = await session.notices();
     process.stdout.write(`${output}\n${notices.map((n) => `\n⚠ ${n}`).join("")}${notices.length ? "\n" : ""}`);
     return EXIT.ok;

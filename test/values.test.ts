@@ -285,10 +285,10 @@ describe("value commands", () => {
     await expect(tradeCommand(session, opp7, opp8)).rejects.toThrow(/not on our roster \(held by/);
 
     // Cannot get a player that is already on our roster
-    await expect(tradeCommand(session, mine, mine, { with: "7" })).rejects.toThrow(/already on our roster/);
+    await expect(tradeCommand(session, mine, mine, "7")).rejects.toThrow(/already on our roster/);
 
     // Cannot get a player held by a third team
-    await expect(tradeCommand(session, mine, opp8, { with: "7" })).rejects.toThrow(/held by .*, not/);
+    await expect(tradeCommand(session, mine, opp8, "7")).rejects.toThrow(/held by .*, not/);
   });
 
   it("rejects wrong-side picks in both give and get", async () => {
@@ -303,11 +303,11 @@ describe("value commands", () => {
     );
 
     // Roster 2 traded away their 2027 R1 pick; they only own 2027 R1 via manager04
-    await expect(tradeCommand(session, mine, "2027 R1 (own)", { with: "2" })).rejects.toThrow(
+    await expect(tradeCommand(session, mine, "2027 R1 (own)", "2")).rejects.toThrow(
       /does not own a 2027 R1 pick via/,
     );
     // Roster 2 owns no 2026 R1 pick at all
-    await expect(tradeCommand(session, mine, "2026 R1", { with: "2" })).rejects.toThrow(
+    await expect(tradeCommand(session, mine, "2026 R1", "2")).rejects.toThrow(
       /does not own any 2026 round 1 pick/,
     );
   });
@@ -330,18 +330,28 @@ describe("value commands", () => {
     );
   });
 
-  it("resolves counterparty via --with or positional argument", async () => {
+  it("resolves the counterparty and original teams by manager name", async () => {
+    const { session } = valuesSession();
+    const { ctx, rosters } = await session.data();
+    const mine = rosters.find((r) => r.roster_id === FIXTURE_OWNER_ROSTER)!.players[0]!;
+    const name = (id: number) => ctx.teams.find((t) => t.rosterId === id)!.managerName;
+
+    const out = await tradeCommand(session, mine, "2028 1st", name(2));
+    expect(out).toContain("Trade check: with");
+    expect(out).toMatch(/2028 1st pick \(own\)\s+400/);
+    // Roster 2 holds roster 4's 2027 R1.
+    expect(await tradeCommand(session, mine, `2027 R1 (via ${name(4)})`, "2")).toMatch(/2027 1st pick \(via /);
+  });
+
+  it("rejects free agents on the get side", async () => {
     const { session } = valuesSession();
     const { rosters } = await session.data();
+    const db = await session.players();
+    const rostered = new Set(rosters.flatMap((r) => [...r.players, ...(r.reserve ?? []), ...(r.taxi ?? [])]));
     const mine = rosters.find((r) => r.roster_id === FIXTURE_OWNER_ROSTER)!.players[0]!;
-
-    const outWith = await tradeCommand(session, mine, "2028 1st", { with: "2" });
-    expect(outWith).toContain("Trade check: with");
-    expect(outWith).toMatch(/2028 1st pick \(own\)\s+400/);
-
-    const outPos = await tradeCommand(session, mine, "2028 1st", "2");
-    expect(outPos).toContain("Trade check: with");
-    expect(outPos).toMatch(/2028 1st pick \(own\)\s+400/);
+    const freeAgent = [...db.keys()].find((id) => !rostered.has(id) && db.get(id)?.position === "WR")!;
+    await expect(tradeCommand(session, mine, freeAgent, "7")).rejects.toThrow(/free agent, not a trade asset/);
+    await expect(tradeCommand(session, mine, freeAgent)).rejects.toThrow(/free agent, not a trade asset/);
   });
 
   it("refuses ambiguous names and missing sides", async () => {

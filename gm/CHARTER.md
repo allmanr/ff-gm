@@ -126,7 +126,7 @@ Walk-away price: Add 2028 R3 pick (own); do not include 2027 1st.
 Resulting roster & drop: Roster remains at 25/25 (1-for-1 player exchange; no drop required).
 
 Preflight verification:
-- Lineup impact: Player Y replaces Player Z (RB, TEAM) at RB2. Projected weekly gain: +3.2 pts (Player Y 2026 recorded avg 14.1 PPG vs Player Z 10.9 PPG; Player Z moves to bench ahead of Player W).
+- Lineup impact: Player Y replaces Player Z (RB, TEAM) at RB2; Player Z moves to bench ahead of Player W. Recorded points: Player Y 14.1 vs Player Z 10.9 PPG in 2026 Sleeper matchups (+3.2/week recorded, not a projection). No forward estimate used.
 - Market values (FantasyCalc.com): Give 3,400 (Player X 2,800 + 2027 R2 600) vs Get 3,650 (Player Y 3,650). Net market value: +250 (+7%).
 - Why Team Alpha considers: Alpha is 1-5, rebuilding, RB-heavy with zero WR depth behind injured starters, and acquires a 23yo WR plus a future pick.
 - Why Team Alpha declines / free alternative: Alpha could decide to hold Player Y until the trade deadline when RB scarcity peaks, or stream free-agent WRs rather than parting with a top-20 dynasty RB.

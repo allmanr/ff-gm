@@ -101,7 +101,7 @@ Back up GM notes after sessions: `git -C private add -A && git -C private commit
 | What changed since I last looked | `ff changes` (advances the baseline; `--no-write` just peeks) |
 | One player | `ff player "Name"` |
 | Dynasty market values | `ff values` (`--league` for every team) |
-| Is this trade fair on market value? | `ff trade "Player A, 2027 R2" "Player B"` |
+| Is this trade fair on market value? | `ff trade "Player A, 2027 R2 (own)" "Player B" --with <manager>` |
 | Future pick ownership | `ff picks` |
 | A manager's trade history and tendencies | `ff history <manager>` |
 
@@ -113,7 +113,7 @@ Tracked with impact and verdict under Open in [Project state](docs/PROJECT_STATE
 
 - **No PPG or last-3 numbers.** nflverse scoring refuses any active rule the source cannot supply, and this league enables `st_ff` and `st_fum_rec`. The `ff free-agents` PPG/L3 columns are blank, `--sort ppg` falls back to market value, and `npm run verify-scoring` exits nonzero. Sleeper's own weekly points (`ff roster`, `matchups`, `bench`, `player`) are exact.
 - **No projections.** Start/sit advice comes from the GM's web research and implied team totals.
-- **`ff trade` checks market value only.** It does not check roster fit or that each asset is on the side you named; read the "On roster" column.
+- **`ff trade` checks market value and ownership only.** It refuses assets on the wrong side, free agents, and ambiguous picks, but does not check roster fit, drops, or lineup impact.
 - **Market values** refresh at most once an hour (FantasyCalc's terms). Player downloads are coordinated across parallel agents and attempted at most once per 24 hours, including failures (`--refresh-players` can retry when no cache exists); a failed refresh uses a valid stale cache when available.
 - **No scheduling.** Briefs run when you run them.
 
