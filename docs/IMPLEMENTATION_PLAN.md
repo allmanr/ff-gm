@@ -40,7 +40,7 @@ League Watcher (`ff changes`), league history, FantasyCalc values, NFL schedule 
 
 ## Next engineering work
 
-Use the ordered ticket queue in [PROJECT_STATE.md](PROJECT_STATE.md#recommended-engineering-queue-checked-2026-10-20). Recommended order is #8, #7, #10, then #9. Refresh #11 alongside the first implementation. This is a backlog recommendation, not authorization to commit, push, or close tickets. Issue #6 is implemented in PR #12.
+Use the ordered ticket queue in [PROJECT_STATE.md](PROJECT_STATE.md#recommended-engineering-queue-checked-2026-10-20). Recommended order is #8, #7, #10, then #9. Refresh #11 alongside the first implementation. This is a backlog recommendation, not authorization to commit, push, or close tickets. Issue #6 was merged in [PR #12](https://github.com/allmanr/ff-gm/pull/12).
 
 Start with [issue #8](https://github.com/allmanr/ff-gm/issues/8). Issue bodies define the remaining acceptance criteria. Do not claim tickets closed from documentation updates alone.
 
