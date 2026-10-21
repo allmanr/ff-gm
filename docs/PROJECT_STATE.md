@@ -1,6 +1,6 @@
 # Project State
 
-**Last updated:** 2026-10-21 · **Base:** `main` at 70ecbad ([PR #20](https://github.com/allmanr/ff-gm/pull/20), squash merged). No open GitHub issues.
+**Last updated:** 2026-10-21 · **Base:** `main` at 3d6cdd1 ([PR #22](https://github.com/allmanr/ff-gm/pull/22), squash merged). Five open issues (#23–#27) from the 2026-10-21 dynasty-strategy research pass.
 
 ## Mission
 
@@ -70,7 +70,13 @@ Earlier per-PR gates (#2, #5, #12, #14, #15) are recorded in their PRs and in `g
 
 ### Engineering queue
 
-No open GitHub issues. The next work comes from the limitations below or from Owner direction.
+From the 2026-10-21 dynasty-strategy research pass (specialist research memo, scoped by the engineering role). Order: #23 → #24 → #25, then the optional pair.
+
+- [#23](https://github.com/allmanr/ff-gm/issues/23) — price next-draft picks with FantasyCalc early/mid/late tiers (already in the cached payload; also adds the unpriced-pick note listed below). S → fix.
+- [#24](https://github.com/allmanr/ff-gm/issues/24) — `ff trade` roster legality and both teams' lineup delta (the arithmetic half of #8). M → fix.
+- [#25](https://github.com/allmanr/ff-gm/issues/25) — briefs state the validated week and deadline countdown; recap archives old closed recommendations. Prompt-only, S → fix.
+- [#26](https://github.com/allmanr/ff-gm/issues/26) — project next-draft slot from the league's verified draft-order rule. M → optional; after #23, or before the offseason draft market.
+- [#27](https://github.com/allmanr/ff-gm/issues/27) — `ff rosters` non-QB SUPER_FLEX starts and active/IR fullness. S → optional; pair with #24.
 
 ### Existing limitations and deferred work
 
@@ -83,6 +89,8 @@ No open GitHub issues. The next work comes from the limitations below or from Ow
 - **FantasyCalc `te+`** — bonus size undocumented; mapped from the league's +0.5 and labeled → accept.
 
 ## Closed — don't reopen without new evidence
+
+- **Dynasty research candidates not filed (2026-10-21)** → target-week header already fixed by PR #17 (the mis-targeted war-room report predates the merge; reopen only if a post-merge report mis-targets); market-phase line (opinion; the dynasty specialist owns timing); age-matrix code (`ff roster`/`ff values` show ages); rest-of-season bye matrix (`ff schedule --week N` covers it); franchise-direction memo (GM/Owner task, not engineering); FAAB calculator, memo length caps.
 
 - **nflverse special-teams coverage gap** → closed by D-022 (approximation verified 1,438/1,438 against Sleeper). Reopen only if `verify-scoring` reports misses.
 
