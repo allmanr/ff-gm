@@ -1,4 +1,4 @@
-import { execFileSync, spawnSync } from "node:child_process";
+import { execFileSync, spawn, spawnSync } from "node:child_process";
 import { copyFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -24,7 +24,7 @@ describe("GM launcher", () => {
   function setup() {
     const repo = sandbox();
     for (const file of ["ff-gm", "ff-dev", "node24"]) copyFileSync(join(repoRoot, "bin", file), join(repo, "bin", file));
-    for (const file of ["gm-launcher.ts", "staff.ts", "private-files.ts", "backup.ts", "format.ts"]) copyFileSync(join(repoRoot, "src", file), join(repo, "src", file));
+    for (const file of ["gm-launcher.ts", "agent-progress.ts", "staff.ts", "private-files.ts", "backup.ts", "format.ts"]) copyFileSync(join(repoRoot, "src", file), join(repo, "src", file));
     cpSync(join(repoRoot, "gm"), join(repo, "gm"), { recursive: true });
     writeFileSync(join(repo, "bin/ff"), '#!/usr/bin/env bash\n[[ "$1" == context ]] || exit 2\n[[ "${FAIL_CONTEXT:-}" != 1 ]] || exit 1\ncp "$FF_PRIVATE_DIR/seed.md" "$FF_PRIVATE_DIR/LEAGUE_CONSTITUTION.md"\n', { mode: 0o755 });
     writeFileSync(join(repo, "bin/codex"), `#!/usr/bin/env ${process.execPath}
@@ -52,10 +52,24 @@ if (!args.includes("exec") && process.env.FAKE_ROLLOUT) {
     fs.utimesSync(path.join(dir, "rollout-old.jsonl"), new Date(0), new Date(0));
   }
 }
+if (process.env.CODEX_COUNT_SIGNALS) {
+  for (const [signal, code] of Object.entries({ SIGINT: 130, SIGTERM: 143, SIGHUP: 129, SIGQUIT: 131 })) {
+    process.on(signal, () => {
+      fs.appendFileSync(path.join(process.env.FF_PRIVATE_DIR, "signals.log"), signal + "\\n");
+      setTimeout(() => process.exit(code), 100);
+    });
+  }
+}
+if (process.env.CODEX_STDERR) {
+  console.error("Reading additional input from stdin...");
+  console.error("Synthetic agent ready");
+}
+console.log(JSON.stringify({ type: "thread.started", thread_id: "offline-test" }));
+setTimeout(() => {
 if (process.env.CODEX_FAIL) process.exit(Number(process.env.CODEX_FAIL));
 const output = args.indexOf("-o");
 if (output >= 0 && !process.env.CODEX_EMPTY) fs.writeFileSync(args[output + 1], "Verified stub report\\n");
-console.log(JSON.stringify({ type: "thread.started", thread_id: "offline-test" }));
+}, Number(process.env.CODEX_DELAY_MS || 0));
 `, { mode: 0o755 });
     const env = { ...process.env, FF_PRIVATE_DIR: join(repo, "private"), CODEX_HOME: join(repo, ".codex-home") };
     return { repo, env };
@@ -120,6 +134,139 @@ console.log(JSON.stringify({ type: "thread.started", thread_id: "offline-test" }
   }
   const roles = ["research_boy", "dynasty_knower", "league_watcher", "rookie_scout", "ai_guru"];
 
+  it.each([
+    { args: ["ask", "Check the lineup"], dev: false, label: "GM answer" },
+    { args: ["brief", "war-room"], dev: false, label: "GM war-room brief" },
+    { args: ["specialist", "research_boy", "Check evidence"], dev: false, label: "research_boy" },
+    { args: ["ask", "Check the launcher"], dev: true, label: "Software Dev" },
+  ])("shows progress before $label finishes and keeps stdout as the report", async ({ args, dev, label }) => {
+    const { repo, env } = launch();
+    const child = spawn("bash", [join(repo, "bin", dev ? "ff-dev" : "ff-gm"), ...args], {
+      env: { ...env, CODEX_STDERR: "1", CODEX_DELAY_MS: "200" },
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.on("data", (chunk: Buffer) => { stdout += chunk.toString(); });
+    const finished = new Promise<number | null>((resolve, reject) => {
+      child.once("error", reject);
+      child.once("close", resolve);
+    });
+    const ready = new Promise<void>((resolve, reject) => {
+      child.stderr.on("data", (chunk: Buffer) => {
+        stderr += chunk.toString();
+        if (stderr.includes("Synthetic agent ready")) resolve();
+      });
+      child.once("error", reject);
+      child.once("close", () => reject(new Error("Agent exited before its ready message")));
+    });
+    try {
+      await ready;
+      expect(stderr).toContain(`Starting ${label}. Progress every 15s; no terminal input needed.`);
+      expect(stderr).toContain("Live events: ");
+      expect(stdout).toBe("");
+      expect(await finished).toBe(0);
+      expect(stdout).toBe("Verified stub report\n");
+      expect(stderr).toContain(`${label}: completed after `);
+      expect(stderr).not.toContain("Reading additional input from stdin...");
+      const logDir = join(repo, "private/reports", dev ? "engineering" : "");
+      const events = readdirSync(logDir).find((file) => file.endsWith(".events.jsonl"))!;
+      expect(readFileSync(join(logDir, events), "utf8")).toBe('{"type":"thread.started","thread_id":"offline-test"}\n');
+    } finally {
+      if (child.exitCode === null) child.kill("SIGTERM");
+      await finished;
+    }
+  });
+
+  it.each([
+    { CODEX_FAIL: "7", CODEX_EMPTY: undefined, status: 7 },
+    { CODEX_FAIL: undefined, CODEX_EMPTY: "1", status: 1 },
+  ])("stops progress and preserves a failed run's exit status $status", ({ CODEX_FAIL, CODEX_EMPTY, status }) => {
+    const { repo, env } = launch();
+    const result = run(repo, { ...env, CODEX_FAIL, CODEX_EMPTY }, ["ask", "Check failure"]);
+    expect(result.status).toBe(status);
+    expect(result.stderr).toContain("GM answer: failed after ");
+    expect(result.stdout).toBe("");
+  });
+
+  it("keeps reporting during a quiet agent run and forwards cancellation", async () => {
+    const { repo, env } = launch();
+    const child = spawn("bash", [join(repo, "bin/ff-gm"), "ask", "Wait for cancellation"], {
+      env: { ...env, CODEX_DELAY_MS: "60000" },
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    let stderr = "";
+    let stdout = "";
+    child.stdout.on("data", (chunk: Buffer) => { stdout += chunk.toString(); });
+    const finished = new Promise<number | null>((resolve, reject) => {
+      child.once("error", reject);
+      child.once("close", resolve);
+    });
+    const heartbeat = new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error(`No heartbeat received: ${stderr}`)), 20_000);
+      child.stderr.on("data", (chunk: Buffer) => {
+        stderr += chunk.toString();
+        if (/GM answer: running for \d+s; last event \d+s ago\./.test(stderr)) { clearTimeout(timeout); resolve(); }
+      });
+      child.once("error", reject);
+      child.once("close", () => { clearTimeout(timeout); reject(new Error("Agent exited before its heartbeat")); });
+    });
+    try {
+      await heartbeat;
+      expect(stdout).toBe("");
+      child.kill("SIGINT");
+      expect(await finished).toBe(130);
+      expect(stderr).toContain("GM answer: failed after ");
+      expect(stderr).toContain("Agent failed; events: ");
+      const dir = join(repo, "private/reports");
+      const events = readdirSync(dir).find((file) => file.endsWith(".events.jsonl"))!;
+      expect(readFileSync(join(dir, events), "utf8")).toBe('{"type":"thread.started","thread_id":"offline-test"}\n');
+      expect(readdirSync(dir).filter((file) => file.endsWith(".md"))).toEqual([]);
+    } finally {
+      if (child.exitCode === null) child.kill("SIGTERM");
+      await finished;
+    }
+  }, 25_000);
+
+  it.each([
+    { signal: "SIGINT", status: 130 },
+    { signal: "SIGTERM", status: 143 },
+    { signal: "SIGHUP", status: 129 },
+    { signal: "SIGQUIT", status: 131 },
+  ] satisfies { signal: NodeJS.Signals; status: number }[])("delivers terminal process-group $signal to the agent exactly once", async ({ signal, status }) => {
+    const { repo, env } = launch();
+    const child = spawn("bash", [join(repo, "bin/ff-gm"), "ask", "Wait for terminal cancellation"], {
+      env: { ...env, CODEX_COUNT_SIGNALS: "1", CODEX_STDERR: "1", CODEX_DELAY_MS: "60000" },
+      detached: true,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    child.stdout.resume();
+    let stderr = "";
+    const finished = new Promise<number | null>((resolve, reject) => {
+      child.once("error", reject);
+      child.once("close", resolve);
+    });
+    const ready = new Promise<void>((resolve, reject) => {
+      child.stderr.on("data", (chunk: Buffer) => {
+        stderr += chunk.toString();
+        if (stderr.includes("Synthetic agent ready")) resolve();
+      });
+      child.once("error", reject);
+      child.once("close", () => reject(new Error("Agent exited before its ready message")));
+    });
+    try {
+      await ready;
+      if (child.pid === undefined) throw new Error("Launcher has no process id");
+      process.kill(-child.pid, signal);
+      expect(await finished).toBe(status);
+      expect(readFileSync(join(repo, "private/signals.log"), "utf8")).toBe(`${signal}\n`);
+      expect(stderr).toContain("GM answer: failed after ");
+    } finally {
+      if (child.exitCode === null) child.kill("SIGTERM");
+      await finished;
+    }
+  });
+
   it("registers all five native football roles with private records and isolates engineering", () => {
     const { repo, env } = launch();
     expect(run(repo, env, ["ask", "Consult the staff"]).status).toBe(0);
@@ -179,7 +326,9 @@ console.log(JSON.stringify({ type: "thread.started", thread_id: "offline-test" }
 
   it("starts an interactive GM with the same restricted role registry", () => {
     const { repo, env } = launch();
-    expect(run(repo, env, []).status).toBe(0);
+    const result = run(repo, env, []);
+    expect(result.status).toBe(0);
+    expect(result.stderr).toContain("Starting interactive GM session...");
     const args = captured(repo);
     expect(args[0]).toBe("--strict-config");
     expect(args).not.toContain("exec");
@@ -207,6 +356,8 @@ console.log(JSON.stringify({ type: "thread.started", thread_id: "offline-test" }
       expect(report).toMatch(/^\d{4}-\d{2}-\d{2}T.*-session\.md$/);
       expect(readFileSync(join(repo, "private/reports", report!), "utf8")).toBe("Verified stub report\n");
       expect(result.stderr).toContain("Private backup");
+      expect(result.stderr).toContain("Starting GM session handoff.");
+      expect(result.stderr).toContain("GM session handoff: completed after ");
     });
 
     it("marks a failed or interrupted session incomplete without summarizing", () => {

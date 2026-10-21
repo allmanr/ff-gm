@@ -44,7 +44,7 @@ Every brief reads `private/notes/strategy.md`, so set the direction before relyi
 | When | Run | You get |
 |---|---|---|
 | Tue, after Monday Night Football | `ff-gm brief recap` | Result and deciding slots, points left on the bench, standings, league moves, and recommendation closures |
-| Tue | `ff-gm brief war-room` | Next week's lineup plan, waiver claims with FAAB bids and drops, rechecked trade ideas and worthwhile new offers with walk-away prices |
+| Tue | `ff-gm brief war-room` | Current validated week's lineup plan, waiver claims with FAAB bids and drops, rechecked trade ideas and worthwhile new offers with walk-away prices |
 | Wed ~11:00 AM CT | — | Main waiver run (daily runs ~11:01 AM CT; `ff waivers` shows observed times) |
 | Before Thursday and Sunday kickoffs | `ff-gm brief lineup` | Keep or swap for each slot, with injury and inactive checks |
 | Any day | `ff-gm brief daily` | Under 15 lines of what changed, or "Nothing actionable today" |
@@ -52,6 +52,10 @@ Every brief reads `private/notes/strategy.md`, so set the direction before relyi
 | Anytime | `ff-gm` | Interactive session |
 
 Answers from `ask`, `brief` and direct specialist calls are saved to unique files in `private/reports/`, named `<UTC timestamp>-<id>[-<brief or specialist>].md` (e.g. `…-recap.md`, `…-lineup.md`), with adjacent `.events.jsonl` execution logs. Failed runs retain events and exit nonzero; an empty final report is a failure. When an interactive `ff-gm` session ends, the GM resumes it once to save a handoff (material actions, recommendations, open follow-ups) as `…-session.md`; a failed or interrupted session, or a failed summary, is saved as `# INCOMPLETE GM session` instead. `ls private/reports/*-recap.md` shows which weeks the routine ran. Brief prompts live in `gm/briefs/`.
+
+Direct agent runs (`ff-gm ask`, `brief`, `specialist`, and `ff-dev ask`) and interactive GM handoffs show startup status, the live event-log path, and progress every 15 seconds on stderr. Each update shows elapsed time and time since the last event, so a quiet agent is visible without claiming it is making progress. The final report alone goes to stdout. Ctrl+C cancels the agent and keeps its event log. Interactive sessions use Codex's own progress display.
+
+The war-room brief plans for the current NFL season and week from validated league context and names that week at the start. Later-week lookahead is labeled separately. To ask about a different week, use `ff-gm ask` and specify it.
 
 After an answer finishes, Ctrl+C exits the interactive session and starts the handoff turn. A session with no recorded conversation prints a notice instead of saving a summary. Session discovery depends on Codex's local rollout layout.
 
