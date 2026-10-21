@@ -107,6 +107,22 @@ describe("stat book", () => {
     expect(exact.label).not.toContain("st_ff");
   });
 
+  it("scores st_fum_rec from the CSV's opponent fumble recoveries for offensive players only", async () => {
+    const csv = [
+      "player_id,position,season,week,season_type,team,opponent_team,receptions,fumble_recovery_opp",
+      "00-1,TE,2026,1,REG,NYJ,TEN,0,1",
+      "00-3,CB,2026,1,REG,DAL,PHI,0,1",
+    ].join("\n");
+    const rosters = ROSTERS + "2026,DAL,CB,C,00-3,S3\n";
+    const db = new Map([
+      ["S1", { player_id: "S1", position: "TE" }],
+      ["S3", { player_id: "S3", position: "DB", fantasy_positions: ["DB", "WR"] }],
+    ]);
+    const book = buildStatBook({ ctx: await ctxWith(), db, statsCsv: csv, rostersCsv: rosters });
+    expect(book.byPlayer.get("S1")?.[0]?.points).toBe(1);
+    expect(book.byPlayer.get("S3")?.[0]?.points).toBe(0);
+  });
+
   it("refuses rule names whose stats are absent from the source", async () => {
     const ctx = await ctxWith(yd100);
     expect(() => buildStatBook({ ctx, db: new Map(), statsCsv: STATS, rostersCsv: ROSTERS })).toThrow(/bonus_rec_yd_100/);
