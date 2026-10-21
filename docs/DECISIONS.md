@@ -220,3 +220,15 @@ The football workspace cannot write engineering source. Engineering sessions may
 **Rationale:** Sleeper asks that the ~5 MB map be called "once per day at most". The exception cannot produce more than one successful download per day, because a success creates the cache and ends it. Most failures (DNS, timeouts, outages) transfer little. Without it, one failed first download blocks every player command for a day. The remaining repeat-download case (payload fails schema validation) requires the Owner to pass the flag each time.
 
 **Status:** active
+
+---
+
+## D-021 — 2026-10-21 — FantasyPros Superflex ECR in weekly advice
+
+**Decision:** The Owner directed that FantasyPros weekly expert consensus rankings, Superflex PPR format, be checked for every start/sit, lineup and waiver recommendation. GM agents fetch the public page `nfl/rankings/ppr-superflex.php` during a session, cite the ranks they use with week and update date, and do not store full ranking tables. `ff` does not fetch it, and the paid FantasyPros API remains deferred (no new spend).
+
+**Rationale:** Terms of Use (effective 2010-07-01, checked 2026-10-21) permit a single copy for personal use and forbid commercial use; they have no AI or scraping clause. robots.txt allows `/nfl/rankings/` (crawl-delay 5) and the site publishes `llms.txt`. An Owner's personal, non-commercial lineup check fits. The ranks live in embedded page JSON, so the charter gives a shell command instead of relying on a page reader. ECR is expert opinion in PPR without TE premium, so it stays a labeled input, not league-scored points.
+
+**Extends:** D-018's permitted sources. DynastyProcess stays off-limits (it redistributes FantasyPros data).
+
+**Status:** active

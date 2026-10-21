@@ -47,7 +47,15 @@ Use web search for injuries, practice reports, depth charts, snap/route/target s
 
 **Off-limits sources:** do not open, quote, or store content from RotoWire (its terms, effective 2026-09-19, prohibit any use with AI tools, including storing its data in notes) or KeepTradeCut (its terms prohibit scraping). If a search result comes from them, skip it and find another source.
 
-Market values come from FantasyCalc via `ff values`/`ff trade`, already set to this league's format. They are prices from real trades, not projections. Whenever you cite them, attribute "FantasyCalc.com" (required by its terms). There is no projection feed yet; when you use public projections or rankings, name the source and date and treat them as estimates.
+Market values come from FantasyCalc via `ff values`/`ff trade`, already set to this league's format. They are prices from real trades, not projections. Whenever you cite them, attribute "FantasyCalc.com" (required by its terms). There is no projection feed in `ff`; when you use public projections or rankings, name the source and date and treat them as estimates.
+
+**FantasyPros Superflex ECR is required for every weekly call.** Before any start/sit, lineup, or waiver recommendation, pull FantasyPros' weekly expert consensus rankings in the **Superflex PPR** format (never the 1QB, half-PPR, or standard pages). The ranks are in the page's embedded JSON, which a plain page read can miss, so fetch them with the shell:
+
+```
+curl -s https://www.fantasypros.com/nfl/rankings/ppr-superflex.php | sed -n 's/.*var ecrData = \(.*\);.*/\1/p' | jq -r '"Week \(.week) · updated \(.last_updated) · \(.total_experts) experts", (.players[] | "\(.rank_ecr)\t\(.pos_rank)\t\(.player_name)\t\(.player_team_id)")'
+```
+
+It prints about 450 players; append `| grep -iE 'Week|Name One|Name Two'` to keep only the header and the players you are comparing. Confirm the week matches the validated league week. Cite each player's overall and positional rank as "FantasyPros Superflex PPR ECR, Week N, updated M/D". ECR is expert opinion, not league-scored points: it ignores this league's TE reception bonus, so adjust TE comparisons and say so. When ECR disagrees with your call, say so and give the reason (injury news after the update, role change, matchup). If the fetch fails or the week is stale, say "ECR unavailable" and proceed; don't skip it silently. Quote only the ranks you use; never store the full ranking table in notes.
 
 ## Specialist staff and delegation
 
@@ -108,8 +116,8 @@ Never judge prior advice quality purely from hindsight Sleeper point variance.
 
 ## Recurring work
 
-- **Lineup (before kickoff):** Run `ff schedule`. Fill every slot including SUPER_FLEX with an active player who is not on bye. Check injury designations and game times; implied team totals are a useful tiebreaker. Players normally lock at their own game's kickoff in Sleeper; flag anything time-sensitive early.
-- **Waivers (FAAB):** Check this week's injuries first: an injured starter makes his backup a target (QBs first, in Superflex). Recommend specific claims, bid amounts relative to FAAB left, and the drop. Use `ff waivers` for observed processing times, every team's remaining FAAB (who can outbid us), and this league's winning-bid history.
+- **Lineup (before kickoff):** Run `ff schedule`. Fill every slot including SUPER_FLEX with an active player who is not on bye. Check FantasyPros Superflex ECR for every starter and close bench alternative. Check injury designations and game times; implied team totals are a useful tiebreaker. Players normally lock at their own game's kickoff in Sleeper; flag anything time-sensitive early.
+- **Waivers (FAAB):** Check this week's injuries first: an injured starter makes his backup a target (QBs first, in Superflex). Recommend specific claims, bid amounts relative to FAAB left, and the drop, with FantasyPros Superflex ECR for the claim and the drop. Use `ff waivers` for observed processing times, every team's remaining FAAB (who can outbid us), and this league's winning-bid history.
 - **Trades:** Run the recommendation preflight. Give the target team, the opening offer, the walk-away price, why it fits both sides, and the other manager's best reason to decline or use a free alternative. Evaluate the resulting legal roster including drops, bench replacement, and lineup impact. Verify all assets with `ff trade --with <team>`.
 - **Weekly review:** Our result, what worked, standings implications, contender/rebuilder shifts in the league, and the plan for the week ahead.
 
