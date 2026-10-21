@@ -51,7 +51,7 @@ Every brief reads `private/notes/strategy.md`, so set the direction before relyi
 | Anytime | `ff-gm ask "Should I trade A for B?"` | One-off question |
 | Anytime | `ff-gm` | Interactive session |
 
-Answers from `ask`, `brief` and direct specialist calls are saved to unique files in `private/reports/`, with adjacent `.events.jsonl` execution logs. Failed runs retain events and exit nonzero; an empty final report is a failure. Brief prompts live in `gm/briefs/`.
+Answers from `ask`, `brief` and direct specialist calls are saved to unique files in `private/reports/`, named `<UTC timestamp>-<id>[-<brief or specialist>].md` (e.g. `…-recap.md`, `…-lineup.md`), with adjacent `.events.jsonl` execution logs. Failed runs retain events and exit nonzero; an empty final report is a failure. When an interactive `ff-gm` session ends, the GM resumes it once to save a handoff (material actions, recommendations, open follow-ups) as `…-session.md`; a failed or interrupted session, or a failed summary, is saved as `# INCOMPLETE GM session` instead. `ls private/reports/*-recap.md` shows which weeks the routine ran. Brief prompts live in `gm/briefs/`.
 
 The GM defaults to `gpt-6-sol` with high reasoning; one deep run can use ~190k tokens. Set `FF_GM_MODEL` / `FF_GM_EFFORT` to change it, e.g. `FF_GM_EFFORT=medium ff-gm ask "…"` for routine questions.
 

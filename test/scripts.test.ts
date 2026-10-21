@@ -33,12 +33,19 @@ const path = require("node:path");
 const args = process.argv.slice(2);
 fs.writeFileSync(path.join(process.env.FF_PRIVATE_DIR, "codex-args.json"), JSON.stringify(args));
 fs.writeFileSync(path.join(process.env.FF_PRIVATE_DIR, "codex-args.txt"), args.join("\\n"));
+fs.appendFileSync(path.join(process.env.FF_PRIVATE_DIR, "codex-calls.jsonl"), JSON.stringify(args) + "\\n");
+if (!args.includes("exec") && process.env.FAKE_ROLLOUT) {
+  const dir = path.join(process.env.CODEX_HOME, "sessions/2026/10/20");
+  fs.mkdirSync(dir, { recursive: true });
+  const cwd = process.env.FAKE_ROLLOUT === "elsewhere" ? "/elsewhere" : process.env.FF_PRIVATE_DIR;
+  fs.writeFileSync(path.join(dir, "rollout-x.jsonl"), JSON.stringify({ type: "session_meta", payload: { id: "sess-1", cwd, source: "cli" } }) + "\\n");
+}
 if (process.env.CODEX_FAIL) process.exit(Number(process.env.CODEX_FAIL));
 const output = args.indexOf("-o");
 if (output >= 0 && !process.env.CODEX_EMPTY) fs.writeFileSync(args[output + 1], "Verified stub report\\n");
 console.log(JSON.stringify({ type: "thread.started", thread_id: "offline-test" }));
 `, { mode: 0o755 });
-    const env = { ...process.env, FF_PRIVATE_DIR: join(repo, "private") };
+    const env = { ...process.env, FF_PRIVATE_DIR: join(repo, "private"), CODEX_HOME: join(repo, ".codex-home") };
     return { repo, env };
   }
 
@@ -167,6 +174,52 @@ console.log(JSON.stringify({ type: "thread.started", thread_id: "offline-test" }
     expect(args).not.toContain("-o");
     expect(args).toContain("agents.enabled=true");
     expect(args).toContain('approval_policy="never"');
+  });
+
+  describe("interactive session reports", () => {
+    const calls = (repo: string) => readFileSync(join(repo, "private/codex-calls.jsonl"), "utf8").trim().split("\n").map((line) => JSON.parse(line) as string[]);
+    const sessionReports = (repo: string) => readdirSync(join(repo, "private/reports")).filter((file) => file.endsWith("-session.md"));
+
+    it("resumes the finished session to save a private dated summary", () => {
+      const { repo, env } = launch();
+      const result = run(repo, { ...env, FAKE_ROLLOUT: "1" }, []);
+      expect(result.status).toBe(0);
+      const [interactive, summary] = calls(repo);
+      expect(interactive).not.toContain("exec");
+      const resume = summary!.indexOf("resume");
+      expect(summary![0]).toBe("exec");
+      expect(summary!.slice(1, resume)).toEqual(interactive);
+      expect(summary!.slice(resume + 1, resume + 3)).toEqual(["sess-1", "--json"]);
+      expect(summary!.at(-1)).toContain("open follow-ups");
+      const [report] = sessionReports(repo);
+      expect(report).toMatch(/^\d{4}-\d{2}-\d{2}T.*-session\.md$/);
+      expect(readFileSync(join(repo, "private/reports", report!), "utf8")).toBe("Verified stub report\n");
+      expect(result.stderr).toContain("Private backup");
+    });
+
+    it("marks a failed or interrupted session incomplete without summarizing", () => {
+      const { repo, env } = launch();
+      expect(run(repo, { ...env, FAKE_ROLLOUT: "1", CODEX_FAIL: "130" }, []).status).toBe(130);
+      expect(calls(repo)).toHaveLength(1);
+      const [report] = sessionReports(repo);
+      expect(readFileSync(join(repo, "private/reports", report!), "utf8")).toMatch(/^# INCOMPLETE GM session\n\nCodex exited with 130/);
+    });
+
+    it("marks the session incomplete when the summary fails", () => {
+      const { repo, env } = launch();
+      expect(run(repo, { ...env, FAKE_ROLLOUT: "1", CODEX_EMPTY: "1" }, []).status).toBe(1);
+      const [report] = sessionReports(repo);
+      expect(readFileSync(join(repo, "private/reports", report!), "utf8")).toMatch(/^# INCOMPLETE GM session\n\nSession summary failed/);
+    });
+
+    it("does not summarize a session from another directory", () => {
+      const { repo, env } = launch();
+      const result = run(repo, { ...env, FAKE_ROLLOUT: "elsewhere" }, []);
+      expect(result.status).toBe(0);
+      expect(calls(repo)).toHaveLength(1);
+      expect(sessionReports(repo)).toEqual([]);
+      expect(result.stderr).toContain("No GM session was recorded");
+    });
   });
 
   it("keeps existing notes and specialist evidence across launches and makes distinct reports", () => {

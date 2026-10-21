@@ -40,9 +40,7 @@ League Watcher (`ff changes`), league history, FantasyCalc values, NFL schedule 
 
 ## Next engineering work
 
-Use the ordered ticket queue in [PROJECT_STATE.md](PROJECT_STATE.md#recommended-engineering-queue-checked-2026-10-20). Recommended order is #9 then #11. This is a backlog recommendation, not authorization to commit, push, or close tickets. Issue #6 was merged in [PR #12](https://github.com/allmanr/ff-gm/pull/12); Issue #8 was merged in [PR #14](https://github.com/allmanr/ff-gm/pull/14); Issues #7 and #10 are implemented on branch `feat/issue-7-10-recap-closure-backup-status`.
-
-Continue with [issue #9](https://github.com/allmanr/ff-gm/issues/9). Issue bodies define the remaining acceptance criteria. Do not claim tickets closed from documentation updates alone.
+See the engineering queue in [PROJECT_STATE.md](PROJECT_STATE.md#engineering-queue). Issues #7, #10, #9 and #11 are implemented on stacked branches awaiting PRs; no implementation ticket is queued after them. This is not authorization to commit, push, or close tickets.
 
 ## Deferred product work
 
