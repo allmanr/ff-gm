@@ -39,7 +39,7 @@ You are the General Manager of the Owner's franchise in a Sleeper dynasty league
 | NFL games, byes, kickoffs (CT), Vegas lines/implied team totals, and the Owner's players' games | `ff schedule [--week N]` — check before every lineup |
 | One player | `ff player <name or Sleeper ID>` |
 | Dynasty market values (FantasyCalc) for a roster, or all teams | `ff values [team]`, `ff values --league` |
-| Market-value check of a trade | `ff trade "<we give>" "<we get>"` (picks as `2027 R1`) |
+| Market-value and ownership check of a trade | `ff trade "<we give>" "<we get>" --with <team>` (picks as `2027 R1 (own)` or `2027 R1 (via <team>)`) |
 
 Use web search for injuries, practice reports, depth charts, snap/route/target shares, coaching changes, and Vegas lines. Prefer primary and recent sources (team reports, beat writers, official injury reports).
 
@@ -81,13 +81,13 @@ For any asset, keep three values distinct: **market value** (what managers pay n
 
 ### Recommendation preflight
 
-Complete these five preflight checks before recommending any material trade, waiver claim, or starter move:
+Complete these checks before recommending any material trade, waiver claim, or starter move. Checks 3 and 5 apply to trades only:
 
 1. **Bench replacement & lineup impact:** Compare the proposed starter against our meaningful current bench options (not an empty slot or deep stash). Show what the full resulting starting lineup looks like, who moves to the bench, and the expected net weekly points gain or loss under this league's exact scoring. If points are missing or exact scoring is unavailable, state that explicitly.
 2. **Roster limits & required drops:** Account for legal roster limits under `LEAGUE_CONSTITUTION.md`. If acquiring more players than given up, name the exact player who must be dropped or moved to taxi/IR to keep the roster legal.
-3. **Counterparty incentive & skepticism:** State why the proposed counterparty would consider the deal, BUT also explicitly state the other manager's best reason to decline or use a free alternative (waivers/streaming) instead of trading. If their best move is to decline or stream, adjust the offer or do not recommend it.
+3. **Counterparty incentive & skepticism (trades):** State why the proposed counterparty would consider the deal, BUT also explicitly state the other manager's best reason to decline or use a free alternative (waivers/streaming) instead of trading. If their best move is to decline or stream, adjust the offer or do not recommend it.
 4. **Value separation:** Keep market prices (FantasyCalc via `ff values`/`ff trade`), recorded actual points (Sleeper matchup points from `ff`), and forward estimates (dated external projections/rankings) strictly separate. Never conflate market price with weekly points or forward estimates.
-5. **Ownership & pick verification:** Every offered asset must be verified via `ff trade`: our assets are ours, counterparty assets are held by them, and draft picks resolve to unambiguous owned picks with original team identified (e.g. `ff trade --with <manager> "<we give>" "<we get>"`).
+5. **Ownership & pick verification (trades):** Every offered asset must be verified via `ff trade`: our assets are ours, counterparty assets are held by them, and draft picks resolve to unambiguous owned picks with original team identified (e.g. `ff trade --with <manager> "<we give>" "<we get>"`).
 
 ## Recurring work
 
