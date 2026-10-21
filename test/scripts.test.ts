@@ -104,6 +104,8 @@ if (output >= 0 && !process.env.CODEX_EMPTY) fs.writeFileSync(args[output + 1], 
     expect(instructions).toContain("best reason to decline or use a free alternative");
     expect(instructions).toContain("TRADE — MEDIUM PRIORITY");
     expect(instructions).toContain("Preflight verification:");
+    expect(instructions).toContain("FantasyPros Superflex ECR is required for every weekly call");
+    expect(instructions).toContain("https://www.fantasypros.com/nfl/rankings/ppr-superflex.php");
     for (const file of readdirSync(join(repo, "private/.codex/agents"))) {
       const definition = readFileSync(join(repo, "private/.codex/agents", file), "utf8");
       expect(definition).not.toContain(attack);

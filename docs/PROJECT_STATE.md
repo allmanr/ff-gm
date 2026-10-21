@@ -14,7 +14,7 @@ Expected invariants, verified live on every run: dynasty, Superflex, full PPR, T
 - `bin/ff-gm` — validates context, writes trusted charter/native specialist configuration, and starts the coordinating Codex GM in `private/`. Five native roles: Research Boy, Superflex Dynasty Knower, League Watcher, Rookie Scout and AI Guru; at most three simultaneous staff threads. Sol/high (D-010); validated constitution remains separate untrusted data. `ask`, `brief`, and direct `specialist <role> "…"` calls save unique reports and JSONL events privately; interactive sessions end with a saved `-session.md` handoff. Specialists save evidence under `private/notes/staff/<role>/`; the GM owns canonical notes and the change baseline.
 - `bin/ff-dev` — separate Software Dev/SRE primary session rooted in the engineering repository. It can repair failed validation without giving football advice; no engineering role is registered with the GM. Engineering reports stay private. Protected and external actions still require explicit Owner authorization.
 - `private/` — gitignored; its own private GitHub repo `allmanr/ff-gm-private` (D-016).
-- External data (D-018): FantasyCalc market values; nflverse schedule, lines, weekly stats, and Sleeper-ID crosswalk. Supplementary: commands degrade with a note if unavailable.
+- External data (D-018, D-021): FantasyCalc market values; nflverse schedule, lines, weekly stats, and Sleeper-ID crosswalk; FantasyPros Superflex PPR weekly ECR, read by GM agents (not `ff`) for every lineup/waiver call. Supplementary: commands degrade with a note if unavailable.
 - No server, database, hosting or scheduler (D-017). Specialist deferral is superseded by the Owner's explicit D-019 decision.
 
 ## Verification status
@@ -33,6 +33,8 @@ Standing live facts (still true until re-checked):
 Earlier per-PR gates (#2, #5, #12, #14) are recorded in their PRs and in `git log`; they are not repeated here.
 
 ## Done
+
+- 2026-10-21: GM charter, lineup/war-room briefs and Research Boy require FantasyPros Superflex PPR weekly ECR (with a shell extraction command, since the ranks sit in embedded JSON) for every start/sit and waiver call (D-021). The launcher test checks that the charter carries the rule.
 
 - [PR #17](https://github.com/allmanr/ff-gm/pull/17): direct GM and engineering agent runs, plus interactive GM handoffs, show startup status, the private event-log path, and a 15-second heartbeat with elapsed time and event silence on stderr. Final reports remain on stdout. The war-room brief now targets the validated current NFL week; its previous explicit next-week instruction caused a one-week shift. Offline verification covers progress during a quiet child process, cancellation, report output, failures and interactive handoffs. Direct Codex children run in a separate process group; the launcher forwards SIGINT, SIGTERM, SIGHUP and SIGQUIT exactly once, including terminal closure. A new live football brief has not been run.
 
@@ -72,7 +74,7 @@ No open GitHub issues remain after PR #15. The live interactive merge gate passe
 - **Private backup push** — `ff backup` and the end-of-run notice show unbacked-up state (Issue #10). Automatic push after GM sessions remains blocked by session permission policy (D-008/D-016). Run the displayed manual backup command `git -C private add -A && git -C private commit -m "..." && git -C private push` as needed. Data-loss risk only if this machine fails → Owner habit.
 - **Scheduled briefs + notifications** — needs a channel choice and a cron job on the Owner's machine (runs only while it is awake). → Owner decides.
 - **Plus usage** — one deep GM run used ~189k tokens. Use `FF_GM_EFFORT=medium` for routine questions; watch Codex limits in heavy weeks.
-- **Projections** — Sleeper supplies exact recorded matchup points; there is still no forward projection feed. Options: derive from nflverse stats or FantasyPros API ($8.99/mo). → defer until the GM's web research proves insufficient.
+- **Projections** — Sleeper supplies exact recorded matchup points; there is still no forward projection feed. FantasyPros Superflex ECR now covers weekly expert opinion (D-021). Options for real projections: derive from nflverse stats or FantasyPros API ($8.99/mo). → defer until ECR plus web research proves insufficient.
 - **Optional review findings (low impact, not fixed):** truncated `ff changes` snapshot crashes instead of re-baselining; commissioner pick moves in a newly added season are not listed as pick changes; `ff schedule` warns only on byes, not empty/no-team starters; a manager who changes between owner and co-owner splits into two `ff history` rows; picks FantasyCalc does not price count as 0 without a note in `ff values`.
 - **Bench verdict edge cases** — ties and commissioner-adjusted totals can be described incorrectly in hindsight text; does not change the lineup optimizer or Sleeper actuals → optional, deferred.
 - **FantasyCalc `te+`** — bonus size undocumented; mapped from the league's +0.5 and labeled → accept.
