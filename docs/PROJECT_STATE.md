@@ -1,6 +1,6 @@
 # Project State
 
-**Last updated:** 2026-10-21 · **Base:** `main` at e22e567 ([PR #18](https://github.com/allmanr/ff-gm/pull/18), squash merged). No open GitHub issues.
+**Last updated:** 2026-10-21 · **Base:** `main` at aa80d62 ([PR #19](https://github.com/allmanr/ff-gm/pull/19), squash merged). No open GitHub issues.
 
 ## Mission
 
@@ -19,9 +19,9 @@ Expected invariants, verified live on every run: dynasty, Superflex, full PPR, T
 
 ## Verification status
 
-Merge gate (2026-10-20, PR #15): CI and a fresh local `npm run check` passed typecheck, lint, 234 offline tests across 15 files, and leak checks over 95 files. The reviewed PR head was 6dc7f75, squash merged as fba66eb.
+Merge gate (2026-10-21, PR #19): subagent review findings fixed; CI and a fresh local `npm run check` passed typecheck, lint, 248 offline tests across 16 files, and leak checks over 97 files. Live `npm run verify-scoring` matched Sleeper on 1,438/1,438 rostered player-weeks. The reviewed head was 1ff5d87, squash merged as aa80d62.
 
-Live acceptance passed with Codex 0.163.0: launch `ff-gm`, ask a short non-football question, then quit with Ctrl+C. The launcher exited 0, saved a new nonempty `private/reports/*-session.md` handoff, and printed private backup status and the manual backup command. This verifies session capture and shutdown, not football advice quality. A live GM recap applying the recommendation closure rules has not been run.
+Interactive-session acceptance (PR #15) passed with Codex 0.163.0: launch `ff-gm`, ask a short non-football question, then quit with Ctrl+C. The launcher exited 0, saved a new nonempty `private/reports/*-session.md` handoff, and printed private backup status and the manual backup command. This verifies session capture and shutdown, not football advice quality. A live GM recap applying the recommendation closure rules has not been run.
 
 Earlier throwaway probes confirmed that `codex exec <options> resume <id> --json -o <file>` keeps prior context, rollout `payload.id` is the resume id, and a turnless terminal session writes no rollout. Offline tests cover session selection, failed summaries, and backup states. Session discovery still depends on Codex's rollout layout.
 
@@ -30,11 +30,11 @@ Standing live facts (still true until re-checked):
 - Specialist wiring (D-019) was verified live once; evidence is in `private/evaluations/specialist-acceptance/`. This shows wiring and bounded behavior, not advice quality.
 - One bounded GM acceptance run (2026-10-05) is in `private/evaluations/`. It is not a consistency benchmark.
 
-Earlier per-PR gates (#2, #5, #12, #14) are recorded in their PRs and in `git log`; they are not repeated here.
+Earlier per-PR gates (#2, #5, #12, #14, #15) are recorded in their PRs and in `git log`; they are not repeated here.
 
 ## Done
 
-- 2026-10-21: nflverse scoring restored (D-022). `st_fum_rec` reads opponent fumble recoveries and `st_ff` counts as 0, disclosed in the stats label. `ff free-agents` PPG/L3, `--sort ppg`, `ff player` stat lines and `npm run verify-scoring` work again.
+- [PR #19](https://github.com/allmanr/ff-gm/pull/19), 2026-10-21: nflverse scoring restored (D-022). `st_fum_rec` reads opponent fumble recoveries for QB/RB/FB/WR/TE only (defenders eligible at WR recover fumbles on defense) and `st_ff` counts as 0, disclosed in the stats label. `ff free-agents` PPG/L3, `--sort ppg`, `ff player` stat lines and `npm run verify-scoring` work again.
 
 - [PR #18](https://github.com/allmanr/ff-gm/pull/18), 2026-10-21: GM charter, lineup/war-room briefs and Research Boy require FantasyPros Superflex PPR weekly ECR (with a shell extraction command, since the ranks sit in embedded JSON) for every start/sit and waiver call (D-021). The launcher test checks that the charter carries the rule.
 
