@@ -14,13 +14,14 @@ async function requireValues(session: Session): Promise<ValueBook> {
   return book;
 }
 
-async function ownedPicks(session: Session, data: LeagueData) {
+async function ownedPicks(session: Session, data: LeagueData, throughSeason?: string) {
   return derivePickOwnership({
     leagueSeason: data.ctx.season,
     rounds: data.ctx.draft.rounds ?? 0,
     rosters: data.rosters,
     tradedPicks: await session.tradedPicks(),
     drafts: data.drafts,
+    throughSeason,
   });
 }
 
@@ -249,7 +250,7 @@ export async function tradeCommand(
   const ownerRosterId = await session.ownerRosterId();
   const data = await session.data();
   const { ctx, rosters } = data;
-  const [db, book, { picks }] = await Promise.all([session.players(), requireValues(session), ownedPicks(session, data)]);
+  const [db, book, known] = await Promise.all([session.players(), requireValues(session), ownedPicks(session, data)]);
   const holderOf = new Map<string, number>();
   for (const r of rosters) for (const id of rosterPlayerIds(r)) holderOf.set(id, r.roster_id);
 
@@ -264,6 +265,10 @@ export async function tradeCommand(
 
   const rawGiveSpecs = parseAssets(give);
   const rawGetSpecs = parseAssets(get);
+  const lastKnown = Number(known.seasons.at(-1));
+  const pickSeasons = [...rawGiveSpecs, ...rawGetSpecs].flatMap((spec) => parsePickSpec(spec, db)?.season ?? []);
+  const beyond = [...new Set(pickSeasons)].filter((s) => Number(s) > lastKnown).sort();
+  const { picks } = beyond.length ? await ownedPicks(session, data, beyond.at(-1)) : known;
 
   // 1. Determine counterparty
   let targetRoster: Roster | undefined;
@@ -355,6 +360,9 @@ export async function tradeCommand(
     "",
     `Net market value for us: ${diff >= 0 ? "+" : ""}${diff} (${sum(giveAssets) ? ((diff / sum(giveAssets)) * 100).toFixed(0) : "n/a"}% of what we give).`,
     missing.length ? `No market value for: ${missing.join(", ")} — the sum understates those assets.` : null,
+    beyond.length
+      ? `${beyond.join(", ")} picks: no pick in that season has been traded, so each team holds its own. Sleeper does not publish the tradeable horizon; confirm in the app.`
+      : null,
     "Caveats: market prices only. Consolidating several pieces into one star usually costs a premium; judge roster fit,",
     "lineup impact in this Superflex/TE-premium format, and required drops separately.",
     ownerPicks.length

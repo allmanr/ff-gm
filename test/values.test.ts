@@ -36,8 +36,8 @@ function syntheticValues() {
   return rows;
 }
 
-function valuesSession(valuesFetch = vi.fn(async (_url: string) => Response.json(syntheticValues()))) {
-  const { fetch } = fixtureFetch();
+function valuesSession(valuesFetch = vi.fn(async (_url: string) => Response.json(syntheticValues())), overrides = {}) {
+  const { fetch } = fixtureFetch(overrides);
   const cacheDir = mkdtempSync(join(tmpdir(), "ff-values-"));
   const session = createSession({
     client: createSleeperClient({ fetch, retries: 0 }),
@@ -341,6 +341,15 @@ describe("value commands", () => {
     expect(out).toMatch(/2028 1st pick \(own\)\s+400/);
     // Roster 2 holds roster 4's 2027 R1.
     expect(await tradeCommand(session, mine, `2027 R1 (via ${name(4)})`, "2")).toMatch(/2027 1st pick \(via /);
+  });
+
+  it("resolves picks in a season where no pick has been traded", async () => {
+    const { session } = valuesSession(undefined, { traded_picks: [] });
+    const { rosters } = await session.data();
+    const mine = rosters.find((r) => r.roster_id === FIXTURE_OWNER_ROSTER)!.players[0]!;
+    const out = await tradeCommand(session, mine, "2028 R1 (own)", "2");
+    expect(out).toMatch(/2028 1st pick \(own\)\s+400/);
+    expect(out).toContain("2028 picks: no pick in that season has been traded");
   });
 
   it("rejects free agents on the get side", async () => {
