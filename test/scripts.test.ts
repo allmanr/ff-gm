@@ -52,6 +52,12 @@ if (!args.includes("exec") && process.env.FAKE_ROLLOUT) {
     fs.utimesSync(path.join(dir, "rollout-old.jsonl"), new Date(0), new Date(0));
   }
 }
+if (process.env.CODEX_COUNT_SIGNALS) {
+  process.on("SIGINT", () => {
+    fs.appendFileSync(path.join(process.env.FF_PRIVATE_DIR, "signals.log"), "SIGINT\\n");
+    setTimeout(() => process.exit(130), 100);
+  });
+}
 if (process.env.CODEX_STDERR) {
   console.error("Reading additional input from stdin...");
   console.error("Synthetic agent ready");
@@ -219,6 +225,40 @@ if (output >= 0 && !process.env.CODEX_EMPTY) fs.writeFileSync(args[output + 1], 
       await finished;
     }
   }, 25_000);
+
+  it("delivers terminal process-group Ctrl+C to the agent exactly once", async () => {
+    const { repo, env } = launch();
+    const child = spawn("bash", [join(repo, "bin/ff-gm"), "ask", "Wait for terminal cancellation"], {
+      env: { ...env, CODEX_COUNT_SIGNALS: "1", CODEX_STDERR: "1", CODEX_DELAY_MS: "60000" },
+      detached: true,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    child.stdout.resume();
+    let stderr = "";
+    const finished = new Promise<number | null>((resolve, reject) => {
+      child.once("error", reject);
+      child.once("close", resolve);
+    });
+    const ready = new Promise<void>((resolve, reject) => {
+      child.stderr.on("data", (chunk: Buffer) => {
+        stderr += chunk.toString();
+        if (stderr.includes("Synthetic agent ready")) resolve();
+      });
+      child.once("error", reject);
+      child.once("close", () => reject(new Error("Agent exited before its ready message")));
+    });
+    try {
+      await ready;
+      if (child.pid === undefined) throw new Error("Launcher has no process id");
+      process.kill(-child.pid, "SIGINT");
+      expect(await finished).toBe(130);
+      expect(readFileSync(join(repo, "private/signals.log"), "utf8")).toBe("SIGINT\n");
+      expect(stderr).toContain("GM answer: failed after ");
+    } finally {
+      if (child.exitCode === null) child.kill("SIGTERM");
+      await finished;
+    }
+  });
 
   it("registers all five native football roles with private records and isolates engineering", () => {
     const { repo, env } = launch();

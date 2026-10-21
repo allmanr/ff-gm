@@ -44,7 +44,7 @@ Every brief reads `private/notes/strategy.md`, so set the direction before relyi
 | When | Run | You get |
 |---|---|---|
 | Tue, after Monday Night Football | `ff-gm brief recap` | Result and deciding slots, points left on the bench, standings, league moves, and recommendation closures |
-| Tue | `ff-gm brief war-room` | Next week's lineup plan, waiver claims with FAAB bids and drops, rechecked trade ideas and worthwhile new offers with walk-away prices |
+| Tue | `ff-gm brief war-room` | Current validated week's lineup plan, waiver claims with FAAB bids and drops, rechecked trade ideas and worthwhile new offers with walk-away prices |
 | Wed ~11:00 AM CT | — | Main waiver run (daily runs ~11:01 AM CT; `ff waivers` shows observed times) |
 | Before Thursday and Sunday kickoffs | `ff-gm brief lineup` | Keep or swap for each slot, with injury and inactive checks |
 | Any day | `ff-gm brief daily` | Under 15 lines of what changed, or "Nothing actionable today" |

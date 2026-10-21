@@ -114,7 +114,7 @@ async function main(): Promise<number> {
     const progress = startAgentProgress(description, events);
     let code = 1;
     try {
-      const child = spawn("codex", [...head, "--json", "-o", out, "--", text], { env, stdio: ["ignore", "pipe", "pipe"] });
+      const child = spawn("codex", [...head, "--json", "-o", out, "--", text], { env, detached: true, stdio: ["ignore", "pipe", "pipe"] });
       child.stdout.on("data", (chunk: Buffer) => { writeSync(fd, chunk); progress.activity(); });
       const stderr = createInterface({ input: child.stderr });
       stderr.on("line", (line) => {
