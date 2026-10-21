@@ -345,6 +345,14 @@ export async function tradeCommand(
     };
   }));
 
+  // A repeated asset would be counted twice in the sums and could start twice in a lineup.
+  const seen = new Set<string>();
+  for (const x of [...giveAssets, ...getAssets]) {
+    const key = x.playerId ?? x.label;
+    if (seen.has(key)) throw new UsageError(`${x.label} is listed more than once.`);
+    seen.add(key);
+  }
+
   const sum = (xs: TradeAsset[]) => xs.reduce((a, x) => a + (x.value ?? 0), 0);
   const side = (title: string, xs: TradeAsset[]) => [
     `${title} (${sum(xs)})`,
