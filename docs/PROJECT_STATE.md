@@ -1,6 +1,6 @@
 # Project State
 
-**Last updated:** 2026-10-20 · **Base:** `main` at 2bd34c6 (PR #14). Unmerged, stacked: `feat/issue-7-10-recap-closure-backup-status` (#7, #10) → `feat/issue-9-interactive-session-reports` (#9, #11).
+**Last updated:** 2026-10-20 · **Base:** `main` at fba66eb ([PR #15](https://github.com/allmanr/ff-gm/pull/15), squash merged). Issues #7, #9, #10 and #11 are closed. The redundant local `feat/issue-7-10-recap-closure-backup-status` branch was deleted after confirming it was contained in the PR.
 
 ## Mission
 
@@ -19,7 +19,11 @@ Expected invariants, verified live on every run: dynasty, Superflex, full PPR, T
 
 ## Verification status
 
-Current gate (2026-10-20, branch `feat/issue-9-interactive-session-reports`): `npm run check` passes typecheck, lint, 234 offline tests across 15 files, and leak checks over 95 files. Live: `ff backup` reported clean / synced. Throwaway Codex 0.163.0 probes confirmed: `codex exec <options> resume <id> --json -o <file>` keeps the prior context; rollout `payload.id` is that id; a terminal session records `source: "cli"`, `originator: "codex-tui"`; a turnless session writes no rollout; quitting with Ctrl+C exits 0. Mutation checks confirm each session-selection filter is tested. Not run live: a full `ff-gm` session with summary, or a GM recap applying the closure rules.
+Merge gate (2026-10-20, PR #15): CI and a fresh local `npm run check` passed typecheck, lint, 234 offline tests across 15 files, and leak checks over 95 files. The reviewed PR head was 6dc7f75, squash merged as fba66eb.
+
+Live acceptance passed with Codex 0.163.0: launch `ff-gm`, ask a short non-football question, then quit with Ctrl+C. The launcher exited 0, saved a new nonempty `private/reports/*-session.md` handoff, and printed private backup status and the manual backup command. This verifies session capture and shutdown, not football advice quality. A live GM recap applying the recommendation closure rules has not been run.
+
+Earlier throwaway probes confirmed that `codex exec <options> resume <id> --json -o <file>` keeps prior context, rollout `payload.id` is the resume id, and a turnless terminal session writes no rollout. Offline tests cover session selection, failed summaries, and backup states. Session discovery still depends on Codex's rollout layout.
 
 Standing live facts (still true until re-checked):
 - `npm run verify-scoring` refuses because nflverse cannot supply `st_ff` and `st_fum_rec` (since 2026-10-02). The earlier 749/749 match assumed those were zero and does not prove coverage. Sleeper's recorded matchup points remain the actuals.
@@ -30,9 +34,10 @@ Earlier per-PR gates (#2, #5, #12, #14) are recorded in their PRs and in `git lo
 
 ## Done
 
+- [PR #15](https://github.com/allmanr/ff-gm/pull/15) squash merged after review, CI, local checks and live interactive acceptance. Issues #7, #9, #10 and #11 are closed.
 - [Issue #9, interactive session reports](https://github.com/allmanr/ff-gm/issues/9): when an interactive `ff-gm` session ends, the launcher finds that top-level Codex session (same private cwd, not exec or subagent) and resumes it once with `exec resume` to save `private/reports/<stamp>-session.md` covering actions, recommendations and follow-ups. Failed or interrupted sessions and failed summaries are saved as `# INCOMPLETE GM session`. README documents report names and the weekly commands. Session discovery reads Codex's rollout layout (marked `ponytail:` in `src/gm-launcher.ts`).
 - [Issue #11, status refresh](https://github.com/allmanr/ff-gm/issues/11): header, verification and queue now describe current state; dated per-PR gates were trimmed.
-- [Issue #10, private backup status visibility](https://github.com/allmanr/ff-gm/issues/10): implemented safe, read-only backup status inspection via `ff backup` and surfaced at the conclusion of routine GM runs in `src/gm-launcher.ts`. Checks clean/synced, dirty, ahead, and remote-unavailable states without making network calls or altering git remotes; provides the exact manual backup command when unbacked-up; strictly protects privacy by never printing file names, paths, or diffs.
+- [Issue #10, private backup status visibility](https://github.com/allmanr/ff-gm/issues/10): implemented read-only backup status inspection via `ff backup` and at the conclusion of GM runs in `src/gm-launcher.ts`. Reports clean/synced, dirty, ahead, or unavailable repository/tracking state from local Git data. It never contacts the remote or prints private file names or diffs. When backup is needed, it prints the manual command.
 
 - [Issue #7, recommendation closure](https://github.com/allmanr/ff-gm/issues/7): established structured `notes/recommendations.md` lifecycle with explicit statuses (`OPEN`, `ACTED`, `DECLINED`, `SUPERSEDED`, `ACTION_UNKNOWN`), `## Active / Open` section at the top for immediate scanning, and `## Closed history`. Strict separation between decision quality (soundness based on facts available at recommendation time) and observed outcome (Sleeper points, results, and variance). Updated `gm/CHARTER.md` (lifecycle, memory, output style examples for lineup, waiver, and trade closures), `src/gm-launcher.ts` seed template, and `gm/briefs/recap.md` step 5 to check Sleeper transactions and matchups and ask the Owner one concise question when an action cannot be verified.
 
@@ -57,7 +62,7 @@ Earlier per-PR gates (#2, #5, #12, #14) are recorded in their PRs and in `git lo
 
 ### Engineering queue
 
-No open implementation tickets once the two stacked branches merge. The next work comes from the limitations below or from Owner direction. Before merging #9, run one real `ff-gm` session and confirm it saves a `-session.md` summary → fix if it does not.
+No open GitHub issues remain after PR #15. The live interactive merge gate passed. The next work comes from the limitations below or from Owner direction.
 
 ### Existing limitations and deferred work
 
@@ -72,6 +77,7 @@ No open implementation tickets once the two stacked branches merge. The next wor
 
 ## Closed — don't reopen without new evidence
 
+- **PR #15 live interactive merge gate** → passed with a real question, Ctrl+C, a saved session handoff and the final backup notice. Issues #7, #9, #10 and #11 are closed; do not recreate the old stacked-branch queue.
 - **Specialist deferral** → superseded by explicit Owner direction, implemented under D-019. Do not use the old V1 sequencing decision to defer staff again.
 - **Parallel player downloads and validation-output symlinks** → fixed for specialist operation; offline regressions cover real processes, crash release and protection of trusted targets.
 

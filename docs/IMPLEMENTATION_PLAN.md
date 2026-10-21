@@ -1,6 +1,6 @@
 # Implementation plan
 
-**Updated:** 2026-10-20 · **Status:** Phases 1–3 built; specialist staff added under D-019 · **Decisions:** [D-015](DECISIONS.md), [D-018](DECISIONS.md), [D-019](DECISIONS.md) · **Target architecture (later):** [IMPLEMENTATION_SPEC.md](IMPLEMENTATION_SPEC.md)
+**Updated:** 2026-10-20 · **Status:** Phases 1–4 built; recommendation closure, backup status and interactive reports merged in [PR #15](https://github.com/allmanr/ff-gm/pull/15) · **Decisions:** [D-015](DECISIONS.md), [D-018](DECISIONS.md), [D-019](DECISIONS.md) · **Target architecture (later):** [IMPLEMENTATION_SPEC.md](IMPLEMENTATION_SPEC.md)
 
 Build the smallest thing that gives the Owner validated football advice this season. Add the next piece only when its absence is felt in real use.
 
@@ -14,7 +14,7 @@ Every command validates the league and roster ownership before printing anything
 | `ff standings`, `ff rosters` | Records and divisions; every team's QB depth, positional counts, ages, 1sts |
 | `ff roster [team]` | Slots, byes, weekly league points, market value, FAAB left, future picks |
 | `ff picks [team]` | Future pick ownership (defaults plus traded picks) |
-| `ff free-agents [--pos] [--sort ppg]` | Unrostered startable players with value, depth, trends, and league-scored PPG |
+| `ff free-agents [--pos] [--sort ppg]` | Unrostered startable players with value, depth and trends; league-scored PPG requires complete source coverage |
 | `ff trending`, `ff transactions`, `ff waivers` | Market heat; league moves; observed waiver run times, FAAB left, winning bids |
 | `ff matchups`, `ff bench`, `ff schedule` | Scores and head-to-head; hindsight best lineup; games, byes, kickoffs, implied totals |
 | `ff player <name\|id>` | Detail, ownership, league points, scored stat lines for any player |
@@ -25,12 +25,13 @@ Every command validates the league and roster ownership before printing anything
 
 - `gm/CHARTER.md`: role, ground rules (facts only from `ff`, fail closed, off-limits sources), tools, decision lenses, recurring work, memory files, output style.
 - `bin/ff-gm`: validates, assembles `private/AGENTS.md`, starts Codex in `private/`. `ask "…"` for one turn; `brief <name>` for the routines in `gm/briefs/`.
+- Material recommendations use explicit lifecycle states, with active items above closed history and decision quality separate from observed outcomes. Interactive sessions save a short handoff on exit; successful one-shot runs and interactive exits print private backup status. The live question → Ctrl+C → report and backup-notice flow passed before PR #15 merged.
 
 ## Phase 3 — added after real gaps (done)
 
 League Watcher (`ff changes`), league history, FantasyCalc values, NFL schedule and lines, observed waiver timing, nflverse scoring with source-coverage refusal (currently unavailable because `st_ff` and `st_fum_rec` are missing; the earlier 749/749 comparison assumed those keys were zero), lineup optimizer (matches Sleeper max PF).
 
-## Phase 4 — specialist staff (Owner approved, D-019)
+## Phase 4 — specialist staff (done, D-019)
 
 - Real native Codex roles: Research Boy, Superflex Dynasty Knower, League Watcher, Rookie Scout and AI Guru. The GM delegates bounded assignments, waits, reads evidence, resolves disagreements and owns canonical notes.
 - Trusted role prompts and a registry generate private native TOML configuration. Maximum three simultaneous staff threads; no recursive staff delegation. Direct calls use `ff-gm specialist <role> "task"`.
@@ -40,7 +41,7 @@ League Watcher (`ff changes`), league history, FantasyCalc values, NFL schedule 
 
 ## Next engineering work
 
-See the engineering queue in [PROJECT_STATE.md](PROJECT_STATE.md#engineering-queue). Issues #7, #10, #9 and #11 are implemented on stacked branches awaiting PRs; no implementation ticket is queued after them. This is not authorization to commit, push, or close tickets.
+See the engineering queue in [PROJECT_STATE.md](PROJECT_STATE.md#engineering-queue). PR #15 is merged and issues #7, #9, #10 and #11 are closed. No open GitHub issues remain. Use the documented limitations and Owner direction to select future work.
 
 ## Deferred product work
 
