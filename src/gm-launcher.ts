@@ -121,18 +121,18 @@ async function main(): Promise<number> {
         // Codex probes /dev/null as non-terminal stdin, then immediately gets EOF.
         if (line !== "Reading additional input from stdin...") console.error(line);
       });
-      const interrupt = () => { child.kill("SIGINT"); };
-      const terminate = () => { child.kill("SIGTERM"); };
-      process.on("SIGINT", interrupt);
-      process.on("SIGTERM", terminate);
+      const signals = (["SIGINT", "SIGTERM", "SIGHUP", "SIGQUIT"] satisfies NodeJS.Signals[]).map((signal) => {
+        const handler = () => { child.kill(signal); };
+        process.on(signal, handler);
+        return { signal, handler };
+      });
       try {
         code = await new Promise<number>((resolve, reject) => {
           child.once("error", reject);
           child.once("close", (status, signal) => resolve(status ?? (signal ? 128 + constants.signals[signal] : 1)));
         });
       } finally {
-        process.off("SIGINT", interrupt);
-        process.off("SIGTERM", terminate);
+        for (const { signal, handler } of signals) process.off(signal, handler);
         stderr.close();
       }
     } finally {

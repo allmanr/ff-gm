@@ -53,10 +53,12 @@ if (!args.includes("exec") && process.env.FAKE_ROLLOUT) {
   }
 }
 if (process.env.CODEX_COUNT_SIGNALS) {
-  process.on("SIGINT", () => {
-    fs.appendFileSync(path.join(process.env.FF_PRIVATE_DIR, "signals.log"), "SIGINT\\n");
-    setTimeout(() => process.exit(130), 100);
-  });
+  for (const [signal, code] of Object.entries({ SIGINT: 130, SIGTERM: 143, SIGHUP: 129, SIGQUIT: 131 })) {
+    process.on(signal, () => {
+      fs.appendFileSync(path.join(process.env.FF_PRIVATE_DIR, "signals.log"), signal + "\\n");
+      setTimeout(() => process.exit(code), 100);
+    });
+  }
 }
 if (process.env.CODEX_STDERR) {
   console.error("Reading additional input from stdin...");
@@ -226,7 +228,12 @@ if (output >= 0 && !process.env.CODEX_EMPTY) fs.writeFileSync(args[output + 1], 
     }
   }, 25_000);
 
-  it("delivers terminal process-group Ctrl+C to the agent exactly once", async () => {
+  it.each([
+    { signal: "SIGINT", status: 130 },
+    { signal: "SIGTERM", status: 143 },
+    { signal: "SIGHUP", status: 129 },
+    { signal: "SIGQUIT", status: 131 },
+  ] satisfies { signal: NodeJS.Signals; status: number }[])("delivers terminal process-group $signal to the agent exactly once", async ({ signal, status }) => {
     const { repo, env } = launch();
     const child = spawn("bash", [join(repo, "bin/ff-gm"), "ask", "Wait for terminal cancellation"], {
       env: { ...env, CODEX_COUNT_SIGNALS: "1", CODEX_STDERR: "1", CODEX_DELAY_MS: "60000" },
@@ -250,9 +257,9 @@ if (output >= 0 && !process.env.CODEX_EMPTY) fs.writeFileSync(args[output + 1], 
     try {
       await ready;
       if (child.pid === undefined) throw new Error("Launcher has no process id");
-      process.kill(-child.pid, "SIGINT");
-      expect(await finished).toBe(130);
-      expect(readFileSync(join(repo, "private/signals.log"), "utf8")).toBe("SIGINT\n");
+      process.kill(-child.pid, signal);
+      expect(await finished).toBe(status);
+      expect(readFileSync(join(repo, "private/signals.log"), "utf8")).toBe(`${signal}\n`);
       expect(stderr).toContain("GM answer: failed after ");
     } finally {
       if (child.exitCode === null) child.kill("SIGTERM");
