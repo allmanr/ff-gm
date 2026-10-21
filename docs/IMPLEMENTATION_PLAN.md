@@ -14,7 +14,7 @@ Every command validates the league and roster ownership before printing anything
 | `ff standings`, `ff rosters` | Records and divisions; every team's QB depth, positional counts, ages, 1sts |
 | `ff roster [team]` | Slots, byes, weekly league points, market value, FAAB left, future picks |
 | `ff picks [team]` | Future pick ownership (defaults plus traded picks) |
-| `ff free-agents [--pos] [--sort ppg]` | Unrostered startable players with value, depth and trends; league-scored PPG requires complete source coverage |
+| `ff free-agents [--pos] [--sort ppg]` | Unrostered startable players with value, depth and trends; league-scored PPG (`st_ff`/`st_fum_rec` approximated per D-022; blank if any other rule is unsupported) |
 | `ff trending`, `ff transactions`, `ff waivers` | Market heat; league moves; observed waiver run times, FAAB left, winning bids |
 | `ff matchups`, `ff bench`, `ff schedule` | Scores and head-to-head; hindsight best lineup; games, byes, kickoffs, implied totals |
 | `ff player <name\|id>` | Detail, ownership, league points, scored stat lines for any player |
@@ -29,7 +29,7 @@ Every command validates the league and roster ownership before printing anything
 
 ## Phase 3 — added after real gaps (done)
 
-League Watcher (`ff changes`), league history, FantasyCalc values, NFL schedule and lines, observed waiver timing, nflverse scoring with source-coverage refusal (currently unavailable because `st_ff` and `st_fum_rec` are missing; the earlier 749/749 comparison assumed those keys were zero), lineup optimizer (matches Sleeper max PF).
+League Watcher (`ff changes`), league history, FantasyCalc values, NFL schedule and lines, observed waiver timing, nflverse scoring with source-coverage refusal (`st_ff`/`st_fum_rec` approximated per D-022; 1,438/1,438 rostered player-weeks matched Sleeper on 2026-10-21), lineup optimizer (matches Sleeper max PF).
 
 ## Phase 4 — specialist staff (done, D-019)
 

@@ -30,7 +30,7 @@ Anchor "this week" to the NFL season and week in the current validated `ff` outp
 | League overview: QB depth, ages, 1sts | `ff rosters` |
 | Standings | `ff standings` |
 | Future picks | `ff picks [team]` |
-| Waiver wire (league-scored PPG when the stat source covers every scoring rule; otherwise blank — compare with dated game logs instead) | `ff free-agents [--pos QB,RB,WR,TE] [--limit N] [--sort ppg]` |
+| Waiver wire (league-scored PPG, with `st_ff`/`st_fum_rec` approximated per the stats label; blank if any other rule is unsupported — compare with dated game logs instead) | `ff free-agents [--pos QB,RB,WR,TE] [--limit N] [--sort ppg]` |
 | Market heat across Sleeper | `ff trending [--type add|drop] [--hours 24]` |
 | What changed since last session (trades, adds/drops, IR, records, picks, injuries) | `ff changes` — run at the start of every session |
 | League activity | `ff transactions [--week N]` |

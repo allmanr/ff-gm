@@ -1,6 +1,6 @@
 # Project State
 
-**Last updated:** 2026-10-21 · **Base:** `main` at 13fdd0e ([PR #16](https://github.com/allmanr/ff-gm/pull/16), squash merged). Issues #7, #9, #10 and #11 are closed. The redundant local `feat/issue-7-10-recap-closure-backup-status` branch was deleted after confirming it was contained in the PR.
+**Last updated:** 2026-10-21 · **Base:** `main` at e22e567 ([PR #18](https://github.com/allmanr/ff-gm/pull/18), squash merged). No open GitHub issues.
 
 ## Mission
 
@@ -26,7 +26,7 @@ Live acceptance passed with Codex 0.163.0: launch `ff-gm`, ask a short non-footb
 Earlier throwaway probes confirmed that `codex exec <options> resume <id> --json -o <file>` keeps prior context, rollout `payload.id` is the resume id, and a turnless terminal session writes no rollout. Offline tests cover session selection, failed summaries, and backup states. Session discovery still depends on Codex's rollout layout.
 
 Standing live facts (still true until re-checked):
-- `npm run verify-scoring` refuses because nflverse cannot supply `st_ff` and `st_fum_rec` (since 2026-10-02). The earlier 749/749 match assumed those were zero and does not prove coverage. Sleeper's recorded matchup points remain the actuals.
+- `npm run verify-scoring` (2026-10-21, weeks 1–6): 1,438/1,438 rostered player-weeks match Sleeper, with `st_ff`/`st_fum_rec` approximated per D-022. Sleeper's recorded matchup points remain the actuals.
 - Specialist wiring (D-019) was verified live once; evidence is in `private/evaluations/specialist-acceptance/`. This shows wiring and bounded behavior, not advice quality.
 - One bounded GM acceptance run (2026-10-05) is in `private/evaluations/`. It is not a consistency benchmark.
 
@@ -34,7 +34,9 @@ Earlier per-PR gates (#2, #5, #12, #14) are recorded in their PRs and in `git lo
 
 ## Done
 
-- 2026-10-21: GM charter, lineup/war-room briefs and Research Boy require FantasyPros Superflex PPR weekly ECR (with a shell extraction command, since the ranks sit in embedded JSON) for every start/sit and waiver call (D-021). The launcher test checks that the charter carries the rule.
+- 2026-10-21: nflverse scoring restored (D-022). `st_fum_rec` reads opponent fumble recoveries and `st_ff` counts as 0, disclosed in the stats label. `ff free-agents` PPG/L3, `--sort ppg`, `ff player` stat lines and `npm run verify-scoring` work again.
+
+- [PR #18](https://github.com/allmanr/ff-gm/pull/18), 2026-10-21: GM charter, lineup/war-room briefs and Research Boy require FantasyPros Superflex PPR weekly ECR (with a shell extraction command, since the ranks sit in embedded JSON) for every start/sit and waiver call (D-021). The launcher test checks that the charter carries the rule.
 
 - [PR #17](https://github.com/allmanr/ff-gm/pull/17): direct GM and engineering agent runs, plus interactive GM handoffs, show startup status, the private event-log path, and a 15-second heartbeat with elapsed time and event silence on stderr. Final reports remain on stdout. The war-room brief now targets the validated current NFL week; its previous explicit next-week instruction caused a one-week shift. Offline verification covers progress during a quiet child process, cancellation, report output, failures and interactive handoffs. Direct Codex children run in a separate process group; the launcher forwards SIGINT, SIGTERM, SIGHUP and SIGQUIT exactly once, including terminal closure. A new live football brief has not been run.
 
@@ -66,11 +68,10 @@ Earlier per-PR gates (#2, #5, #12, #14) are recorded in their PRs and in `git lo
 
 ### Engineering queue
 
-No open GitHub issues remain after PR #15. The live interactive merge gate passed. The next work comes from the limitations below or from Owner direction.
+No open GitHub issues. The next work comes from the limitations below or from Owner direction.
 
 ### Existing limitations and deferred work
 
-- **nflverse scoring coverage** — no PPG/last-3 rankings while `st_ff` and `st_fum_rec` are unavailable: the `ff free-agents` PPG/L3 columns are blank, `--sort ppg` falls back to market value, `ff player` shows no scored stat lines, and `npm run verify-scoring` exits nonzero. The safe refusal is fixed; expanding source coverage is deferred. Use Sleeper recorded matchup points meanwhile. Free-agent evaluation is the main user-facing gap → fix when a permitted source covers both keys.
 - **Private backup push** — `ff backup` and the end-of-run notice show unbacked-up state (Issue #10). Automatic push after GM sessions remains blocked by session permission policy (D-008/D-016). Run the displayed manual backup command `git -C private add -A && git -C private commit -m "..." && git -C private push` as needed. Data-loss risk only if this machine fails → Owner habit.
 - **Scheduled briefs + notifications** — needs a channel choice and a cron job on the Owner's machine (runs only while it is awake). → Owner decides.
 - **Plus usage** — one deep GM run used ~189k tokens. Use `FF_GM_EFFORT=medium` for routine questions; watch Codex limits in heavy weeks.
@@ -80,6 +81,8 @@ No open GitHub issues remain after PR #15. The live interactive merge gate passe
 - **FantasyCalc `te+`** — bonus size undocumented; mapped from the league's +0.5 and labeled → accept.
 
 ## Closed — don't reopen without new evidence
+
+- **nflverse special-teams coverage gap** → closed by D-022 (approximation verified 1,438/1,438 against Sleeper). Reopen only if `verify-scoring` reports misses.
 
 - **PR #15 live interactive merge gate** → passed with a real question, Ctrl+C, a saved session handoff and the final backup notice. Issues #7, #9, #10 and #11 are closed; do not recreate the old stacked-branch queue.
 - **Specialist deferral** → superseded by explicit Owner direction, implemented under D-019. Do not use the old V1 sequencing decision to defer staff again.

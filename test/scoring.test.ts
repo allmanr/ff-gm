@@ -6,7 +6,7 @@ import { fixtureSession, mutated } from "./helpers.ts";
 
 type LeagueJson = { scoring_settings: Record<string, number>; roster_positions: string[] };
 
-// Arithmetic tests use a synthetic supported format; the recorded league must refuse scoring.
+// Arithmetic tests use a synthetic format without the approximated special-teams keys (D-022).
 async function supportedCtx(mutate?: (l: LeagueJson) => void) {
   return ctxWith((l) => {
     l.scoring_settings.st_ff = 0;
@@ -23,9 +23,10 @@ async function ctxWith(mutate?: (l: LeagueJson) => void) {
 describe("exact scoring engine", () => {
   const catches = { receptions: 7, targets: 8, receiving_yards: 105, receiving_tds: 1 };
 
-  it("refuses direct scoring with unsupported special-teams rules", async () => {
-    const ctx = await ctxWith();
-    expect(() => scoreStatLine(ctx, "TE", catches)).toThrow(/st_ff.*st_fum_rec/);
+  it("approximates st_ff as 0 and st_fum_rec from opponent fumble recoveries (D-022)", async () => {
+    const ctx = await ctxWith(); // the recorded league scores both at 1
+    expect(scoreStatLine(ctx, "TE", catches)).toBe(27);
+    expect(scoreStatLine(ctx, "TE", { ...catches, fumble_recovery_opp: 1, def_fumbles_forced: 1 })).toBe(28);
   });
 
   it("applies the TE reception bonus by primary position", async () => {
@@ -63,7 +64,8 @@ describe("exact scoring engine", () => {
 
   it("reports non-zero keys the stat source cannot supply", async () => {
     const ctx = await ctxWith((l) => (l.scoring_settings.bonus_rec_yd_100 = 3));
-    expect(unsupportedScoringKeys(ctx)).toEqual(expect.arrayContaining(["bonus_rec_yd_100", "st_ff", "st_fum_rec"]));
+    expect(unsupportedScoringKeys(ctx)).toEqual(["bonus_rec_yd_100"]);
+    expect(() => scoreStatLine(ctx, "TE", catches)).toThrow(/bonus_rec_yd_100/);
     expect(unsupportedScoringKeys(ctx)).not.toContain("bonus_rec_te");
     expect(unsupportedScoringKeys(ctx)).not.toContain("fgm_50p");
   });
@@ -96,22 +98,47 @@ describe("stat book", () => {
     "00-2,B,WR,2026,1,REG,BUF,HOU,1,2,34,1",
   ].join("\n");
 
-  it("refuses supported rule names when their stats are absent from the source", async () => {
-    const ctx = await ctxWith();
-    expect(() => buildStatBook({ ctx, db: new Map(), statsCsv: STATS, rostersCsv: ROSTERS })).toThrow(/st_ff.*st_fum_rec/);
+  const yd100 = (l: LeagueJson) => (l.scoring_settings.bonus_rec_yd_100 = 3);
+
+  it("discloses the special-teams approximation in the stat label", async () => {
+    const book = buildStatBook({ ctx: await ctxWith(), db: new Map(), statsCsv: STATS, rostersCsv: ROSTERS });
+    expect(book.label).toContain("st_ff counted as 0, st_fum_rec read from opponent fumble recoveries");
+    const exact = buildStatBook({ ctx: await supportedCtx(), db: new Map(), statsCsv: STATS, rostersCsv: ROSTERS });
+    expect(exact.label).not.toContain("st_ff");
+  });
+
+  it("scores st_fum_rec from the CSV's opponent fumble recoveries for offensive players only", async () => {
+    const csv = [
+      "player_id,position,season,week,season_type,team,opponent_team,receptions,fumble_recovery_opp",
+      "00-1,TE,2026,1,REG,NYJ,TEN,0,1",
+      "00-3,CB,2026,1,REG,DAL,PHI,0,1",
+    ].join("\n");
+    const rosters = ROSTERS + "2026,DAL,CB,C,00-3,S3\n";
+    const db = new Map([
+      ["S1", { player_id: "S1", position: "TE" }],
+      ["S3", { player_id: "S3", position: "DB", fantasy_positions: ["DB", "WR"] }],
+    ]);
+    const book = buildStatBook({ ctx: await ctxWith(), db, statsCsv: csv, rostersCsv: rosters });
+    expect(book.byPlayer.get("S1")?.[0]?.points).toBe(1);
+    expect(book.byPlayer.get("S3")?.[0]?.points).toBe(0);
+  });
+
+  it("refuses rule names whose stats are absent from the source", async () => {
+    const ctx = await ctxWith(yd100);
+    expect(() => buildStatBook({ ctx, db: new Map(), statsCsv: STATS, rostersCsv: ROSTERS })).toThrow(/bonus_rec_yd_100/);
   });
 
   it("refuses unsupported rules before downloading supplementary stats", async () => {
-    const ctx = await ctxWith();
+    const ctx = await ctxWith(yd100);
     const fetch = vi.fn(async () => new Response(STATS));
-    await expect(loadStatBook({ ctx, db: new Map(), cacheDir: "unused", fetch })).rejects.toThrow(/st_ff/);
+    await expect(loadStatBook({ ctx, db: new Map(), cacheDir: "unused", fetch })).rejects.toThrow(/bonus_rec_yd_100/);
     expect(fetch).not.toHaveBeenCalled();
   });
 
   it("shows unavailable PPG and an honest fallback sort in free agents", async () => {
-    const { session } = fixtureSession();
+    const { session } = fixtureSession({ overrides: { league: mutated<LeagueJson>("league", yd100) } });
     const out = await freeAgentsCommand(session, { sort: "ppg" });
-    expect(out).toContain("Player stats unavailable: stat source cannot supply scoring keys (st_ff, st_fum_rec)");
+    expect(out).toContain("Player stats unavailable: stat source cannot supply scoring keys (bonus_rec_yd_100)");
     expect(out).toContain("PPG sorting unavailable; sorted by market value where available.");
     expect(out).not.toContain("Sorted by points per game in this league's scoring.");
     expect(out).not.toContain("assumed 0");
