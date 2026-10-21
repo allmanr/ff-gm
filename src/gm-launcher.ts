@@ -1,12 +1,14 @@
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
-import { homedir } from "node:os";
+import { closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, realpathSync, statSync, writeSync } from "node:fs";
+import { constants, homedir } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { createInterface } from "node:readline";
 import { fileURLToPath } from "node:url";
 import { prepareStaff, seedNote, specialistInstructions, staff, tomlString } from "./staff.ts";
 import { assertPrivatePath, safeDirectory, safeWrite } from "./private-files.ts";
 import { checkBackupStatus, formatBackupSummary } from "./backup.ts";
+import { startAgentProgress } from "./agent-progress.ts";
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const engineering = process.argv[2] === "dev";
@@ -15,7 +17,7 @@ const briefs = ["war-room", "recap", "lineup", "daily"];
 const usage = engineering ? 'Usage: ff-dev [ask "task"]' : 'Usage: ff-gm [ask "question" | brief <war-room|recap|lineup|daily> | specialist <research_boy|dynasty_knower|league_watcher|rookie_scout|ai_guru> "task" | staff]';
 const within = (parent: string, child: string) => { const rel = relative(parent, child); return rel === "" || (!rel.startsWith("../") && rel !== ".." && !isAbsolute(rel)); };
 
-function main(): number {
+async function main(): Promise<number> {
   if (argv[0] === "--help" || argv[0] === "help") { console.log(usage); return 0; }
   if (!engineering && argv[0] === "staff" && argv.length === 1) {
     for (const role of staff) console.log(`${role.name}: ${role.description}`);
@@ -48,6 +50,7 @@ function main(): number {
   const env = { ...process.env, FF_PRIVATE_DIR: privateDir, FF_CACHE_DIR: join(repo, ".local/cache"), FF_REPO_DIR: repo, PATH: `${join(repo, "bin")}:${process.env.PATH || ""}` };
   if (!engineering) {
     for (const file of ["LEAGUE_CONSTITUTION.md", "context.json"]) assertPrivatePath(join(privateDir, file), false);
+    console.error("Validating league context...");
     const validation = spawnSync("ff", ["context"], { env, stdio: ["ignore", "ignore", "inherit"] });
     if (validation.status !== 0 || validation.error) {
       console.error("GM not started: league validation failed (details above)."); return 1;
@@ -102,17 +105,41 @@ function main(): number {
   const outputDir = join(privateDir, engineering ? "reports/engineering" : "reports");
   const stamp = (suffix: string) => `${new Date().toISOString().replace(/[:.]/g, "-")}-${randomUUID().slice(0, 8)}${suffix}`;
   /** Runs `codex <head> --json -o <report> -- <prompt>`; the report is saved only if the agent succeeds with a non-empty answer. */
-  const exec = (head: string[], text: string, suffix: string) => {
+  const exec = async (head: string[], text: string, suffix: string) => {
     const name = stamp(suffix);
     const out = join(outputDir, `${name}.md`);
     const events = join(outputDir, `${name}.events.jsonl`);
     const fd = openSync(events, "wx", 0o600);
-    let result;
+    const description = suffix === "-session" ? "GM session handoff" : engineering ? "Software Dev" : role ? role.name : suffix ? `GM ${suffix.slice(1)} brief` : "GM answer";
+    const progress = startAgentProgress(description, events);
+    let code = 1;
     try {
-      result = spawnSync("codex", [...head, "--json", "-o", out, "--", text], { env, stdio: ["ignore", fd, "inherit"] });
-    } finally { closeSync(fd); }
-    if (result.error) throw result.error;
-    if (result.status !== 0) { console.error(`Agent failed; events: ${events}`); return { code: result.status ?? 1, out }; }
+      const child = spawn("codex", [...head, "--json", "-o", out, "--", text], { env, stdio: ["ignore", "pipe", "pipe"] });
+      child.stdout.on("data", (chunk: Buffer) => { writeSync(fd, chunk); progress.activity(); });
+      const stderr = createInterface({ input: child.stderr });
+      stderr.on("line", (line) => {
+        // Codex probes /dev/null as non-terminal stdin, then immediately gets EOF.
+        if (line !== "Reading additional input from stdin...") console.error(line);
+      });
+      const interrupt = () => { child.kill("SIGINT"); };
+      const terminate = () => { child.kill("SIGTERM"); };
+      process.on("SIGINT", interrupt);
+      process.on("SIGTERM", terminate);
+      try {
+        code = await new Promise<number>((resolve, reject) => {
+          child.once("error", reject);
+          child.once("close", (status, signal) => resolve(status ?? (signal ? 128 + constants.signals[signal] : 1)));
+        });
+      } finally {
+        process.off("SIGINT", interrupt);
+        process.off("SIGTERM", terminate);
+        stderr.close();
+      }
+    } finally {
+      closeSync(fd);
+      progress.stop(code === 0 && existsSync(out) && !!readFileSync(out, "utf8").trim() ? "completed" : "failed");
+    }
+    if (code !== 0) { console.error(`Agent failed; events: ${events}`); return { code, out }; }
     if (!existsSync(out) || !readFileSync(out, "utf8").trim()) {
       console.error(`Agent returned no final report; events: ${events}`); return { code: 1, out };
     }
@@ -126,6 +153,7 @@ function main(): number {
   };
 
   if (prompt === undefined) {
+    console.error(`Starting interactive ${engineering ? "Software Dev" : "GM"} session...`);
     const start = Date.now() - 2000; // File mtimes use a coarse kernel clock and can trail Date.now().
     const result = spawnSync("codex", common, { env, stdio: "inherit" });
     if (result.error) throw result.error;
@@ -135,13 +163,13 @@ function main(): number {
     if (code !== 0) incomplete(join(outputDir, `${stamp("-session")}.md`), `Codex exited with ${result.status ?? result.signal}`);
     else if (!session) console.error("No GM session was recorded; no summary saved.");
     else {
-      const summary = exec(["exec", ...common, "resume", session], SESSION_SUMMARY, "-session");
+      const summary = await exec(["exec", ...common, "resume", session], SESSION_SUMMARY, "-session");
       if (summary.code !== 0) { incomplete(summary.out, "Session summary failed"); code = summary.code; }
     }
     backupNotice();
     return code;
   }
-  const { code } = exec(["exec", ...common], prompt, label);
+  const { code } = await exec(["exec", ...common], prompt, label);
   if (code === 0) backupNotice();
   return code;
 }
@@ -168,5 +196,5 @@ function interactiveSession(since: number, cwd: string): string | undefined {
   }
   return newest?.id;
 }
-try { process.exitCode = main(); }
+try { process.exitCode = await main(); }
 catch (error) { console.error(error instanceof Error ? error.message : String(error)); process.exitCode = 1; }

@@ -1,6 +1,6 @@
 # Project State
 
-**Last updated:** 2026-10-20 · **Base:** `main` at fba66eb ([PR #15](https://github.com/allmanr/ff-gm/pull/15), squash merged). Issues #7, #9, #10 and #11 are closed. The redundant local `feat/issue-7-10-recap-closure-backup-status` branch was deleted after confirming it was contained in the PR.
+**Last updated:** 2026-10-21 · **Base:** `main` at 13fdd0e ([PR #16](https://github.com/allmanr/ff-gm/pull/16), squash merged). Issues #7, #9, #10 and #11 are closed. The redundant local `feat/issue-7-10-recap-closure-backup-status` branch was deleted after confirming it was contained in the PR.
 
 ## Mission
 
@@ -33,6 +33,8 @@ Standing live facts (still true until re-checked):
 Earlier per-PR gates (#2, #5, #12, #14) are recorded in their PRs and in `git log`; they are not repeated here.
 
 ## Done
+
+- Local changes on `feat/agent-cli-progress`: direct GM and engineering agent runs, plus interactive GM handoffs, show startup status, the private event-log path, and a 15-second heartbeat with elapsed time and event silence on stderr. Final reports remain on stdout. The war-room brief now targets the validated current NFL week; its previous explicit next-week instruction caused a one-week shift. Offline verification covers progress during a quiet child process, cancellation, report output, failures and interactive handoffs. A new live football brief has not been run.
 
 - [PR #15](https://github.com/allmanr/ff-gm/pull/15) squash merged after review, CI, local checks and live interactive acceptance. Issues #7, #9, #10 and #11 are closed.
 - [Issue #9, interactive session reports](https://github.com/allmanr/ff-gm/issues/9): when an interactive `ff-gm` session ends, the launcher finds that top-level Codex session (same private cwd, not exec or subagent) and resumes it once with `exec resume` to save `private/reports/<stamp>-session.md` covering actions, recommendations and follow-ups. Failed or interrupted sessions and failed summaries are saved as `# INCOMPLETE GM session`. README documents report names and the weekly commands. Session discovery reads Codex's rollout layout (marked `ponytail:` in `src/gm-launcher.ts`).

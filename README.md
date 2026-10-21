@@ -53,6 +53,10 @@ Every brief reads `private/notes/strategy.md`, so set the direction before relyi
 
 Answers from `ask`, `brief` and direct specialist calls are saved to unique files in `private/reports/`, named `<UTC timestamp>-<id>[-<brief or specialist>].md` (e.g. `…-recap.md`, `…-lineup.md`), with adjacent `.events.jsonl` execution logs. Failed runs retain events and exit nonzero; an empty final report is a failure. When an interactive `ff-gm` session ends, the GM resumes it once to save a handoff (material actions, recommendations, open follow-ups) as `…-session.md`; a failed or interrupted session, or a failed summary, is saved as `# INCOMPLETE GM session` instead. `ls private/reports/*-recap.md` shows which weeks the routine ran. Brief prompts live in `gm/briefs/`.
 
+Direct agent runs (`ff-gm ask`, `brief`, `specialist`, and `ff-dev ask`) and interactive GM handoffs show startup status, the live event-log path, and progress every 15 seconds on stderr. Each update shows elapsed time and time since the last event, so a quiet agent is visible without claiming it is making progress. The final report alone goes to stdout. Ctrl+C cancels the agent and keeps its event log. Interactive sessions use Codex's own progress display.
+
+The war-room brief plans for the current NFL season and week from validated league context and names that week at the start. Later-week lookahead is labeled separately. To ask about a different week, use `ff-gm ask` and specify it.
+
 After an answer finishes, Ctrl+C exits the interactive session and starts the handoff turn. A session with no recorded conversation prints a notice instead of saving a summary. Session discovery depends on Codex's local rollout layout.
 
 The GM keeps material recommendations in `private/notes/recommendations.md`, with active items above closed history. Weekly recaps record explicit statuses and assess decision quality separately from Sleeper results; unverifiable actions remain `ACTION_UNKNOWN` until the Owner clarifies them.
