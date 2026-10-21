@@ -19,7 +19,7 @@ Every command validates the league and roster ownership before printing anything
 | `ff matchups`, `ff bench`, `ff schedule` | Scores and head-to-head; hindsight best lineup; games, byes, kickoffs, implied totals |
 | `ff player <name\|id>` | Detail, ownership, league points, scored stat lines for any player |
 | `ff values [team\|--league]`, `ff trade "<give>" "<get>"` | FantasyCalc market values; trade market check |
-| `ff changes`, `ff history [manager]` | League Watcher diff since last run; trades across seasons with tendencies |
+| `ff changes`, `ff history [manager]`, `ff backup` | League Watcher diff since last run; trades across seasons; private repo backup status |
 
 ## Phase 2 — GM v0 (done)
 
@@ -40,9 +40,7 @@ League Watcher (`ff changes`), league history, FantasyCalc values, NFL schedule 
 
 ## Next engineering work
 
-Use the ordered ticket queue in [PROJECT_STATE.md](PROJECT_STATE.md#recommended-engineering-queue-checked-2026-10-20). Recommended order is #7, #10, #9, then #11. This is a backlog recommendation, not authorization to commit, push, or close tickets. Issue #6 was merged in [PR #12](https://github.com/allmanr/ff-gm/pull/12); Issue #8 was merged in [PR #14](https://github.com/allmanr/ff-gm/pull/14).
-
-Start with [issue #7](https://github.com/allmanr/ff-gm/issues/7). Issue bodies define the remaining acceptance criteria. Do not claim tickets closed from documentation updates alone.
+See the engineering queue in [PROJECT_STATE.md](PROJECT_STATE.md#engineering-queue). Issues #7, #10, #9 and #11 are implemented on stacked branches awaiting PRs; no implementation ticket is queued after them. This is not authorization to commit, push, or close tickets.
 
 ## Deferred product work
 

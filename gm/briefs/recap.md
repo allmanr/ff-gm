@@ -4,6 +4,11 @@ Weekly recap, after Monday Night Football.
 2. Our result and why: which slots decided it, and `ff bench --week <week>` for points left on the bench and whether the best lineup would have changed the result.
 3. Standings and playoff picture: where we sit, the race for playoff spots and byes, and the schedule ahead if relevant.
 4. League moves this week and what they say about each manager. Update notes/managers.md with dated facts.
-5. Review open entries in notes/recommendations.md: record what the Owner did (ask if unknown) and how it turned out so far. Judge the decision separately from the result.
+5. Review open entries in notes/recommendations.md:
+   - For each open entry whose decision window has passed, check whether Sleeper transactions (`ff transactions --week <week>`) or matchups (`ff matchups --week <week>`, `ff roster`) reflect the move.
+   - Record explicit status: `ACTED`, `DECLINED`, `SUPERSEDED`, or `ACTION_UNKNOWN`.
+   - Record decision quality (process soundness using facts known at the time) strictly separately from observed outcome (actual points, stats, or transaction result in Sleeper).
+   - If Sleeper records cannot verify whether the move was made or attempted, ask the Owner one concise question rather than guessing or assuming an unobserved move was declined.
+   - Move closed recommendations from the Active / Open section to Closed history to keep open items easy to scan at the top.
 
 Keep it short. End with the two or three things that matter for next week.

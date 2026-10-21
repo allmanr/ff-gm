@@ -24,7 +24,7 @@ describe("GM launcher", () => {
   function setup() {
     const repo = sandbox();
     for (const file of ["ff-gm", "ff-dev", "node24"]) copyFileSync(join(repoRoot, "bin", file), join(repo, "bin", file));
-    for (const file of ["gm-launcher.ts", "staff.ts", "private-files.ts"]) copyFileSync(join(repoRoot, "src", file), join(repo, "src", file));
+    for (const file of ["gm-launcher.ts", "staff.ts", "private-files.ts", "backup.ts", "format.ts"]) copyFileSync(join(repoRoot, "src", file), join(repo, "src", file));
     cpSync(join(repoRoot, "gm"), join(repo, "gm"), { recursive: true });
     writeFileSync(join(repo, "bin/ff"), '#!/usr/bin/env bash\n[[ "$1" == context ]] || exit 2\n[[ "${FAIL_CONTEXT:-}" != 1 ]] || exit 1\ncp "$FF_PRIVATE_DIR/seed.md" "$FF_PRIVATE_DIR/LEAGUE_CONSTITUTION.md"\n', { mode: 0o755 });
     writeFileSync(join(repo, "bin/codex"), `#!/usr/bin/env ${process.execPath}
@@ -33,12 +33,31 @@ const path = require("node:path");
 const args = process.argv.slice(2);
 fs.writeFileSync(path.join(process.env.FF_PRIVATE_DIR, "codex-args.json"), JSON.stringify(args));
 fs.writeFileSync(path.join(process.env.FF_PRIVATE_DIR, "codex-args.txt"), args.join("\\n"));
+fs.appendFileSync(path.join(process.env.FF_PRIVATE_DIR, "codex-calls.jsonl"), JSON.stringify(args) + "\\n");
+if (!args.includes("exec") && process.env.FAKE_ROLLOUT) {
+  const dir = path.join(process.env.CODEX_HOME, "sessions/2026/10/20");
+  fs.mkdirSync(dir, { recursive: true });
+  const cwd = process.env.FAKE_ROLLOUT === "elsewhere" ? "/elsewhere" : process.env.FF_PRIVATE_DIR;
+  const meta = (id, extra) => JSON.stringify({ type: "session_meta", payload: { id, cwd, source: "cli", originator: "codex-tui", ...extra } }) + "\\n";
+  if (process.env.FAKE_ROLLOUT !== "old") fs.writeFileSync(path.join(dir, "rollout-x.jsonl"), meta("sess-1", {}));
+  if (process.env.FAKE_ROLLOUT !== "elsewhere" && process.env.FAKE_ROLLOUT !== "1") {
+    // Newer, but not this terminal session: a one-shot run, a subagent thread, an IDE panel, an unreadable entry, plus an old session.
+    const later = new Date(Date.now() + 60000);
+    for (const [name, extra] of [["exec", { source: "exec", originator: "codex_exec" }], ["sub", { source: { subagent: {} } }], ["ide", { source: "vscode", originator: "codex_vscode" }]]) {
+      fs.writeFileSync(path.join(dir, \`rollout-\${name}.jsonl\`), meta(\`decoy-\${name}\`, extra));
+      fs.utimesSync(path.join(dir, \`rollout-\${name}.jsonl\`), later, later);
+    }
+    fs.symlinkSync(path.join(dir, "missing"), path.join(dir, "rollout-dead.jsonl"));
+    fs.writeFileSync(path.join(dir, "rollout-old.jsonl"), meta("decoy-old", {}));
+    fs.utimesSync(path.join(dir, "rollout-old.jsonl"), new Date(0), new Date(0));
+  }
+}
 if (process.env.CODEX_FAIL) process.exit(Number(process.env.CODEX_FAIL));
 const output = args.indexOf("-o");
 if (output >= 0 && !process.env.CODEX_EMPTY) fs.writeFileSync(args[output + 1], "Verified stub report\\n");
 console.log(JSON.stringify({ type: "thread.started", thread_id: "offline-test" }));
 `, { mode: 0o755 });
-    const env = { ...process.env, FF_PRIVATE_DIR: join(repo, "private") };
+    const env = { ...process.env, FF_PRIVATE_DIR: join(repo, "private"), CODEX_HOME: join(repo, ".codex-home") };
     return { repo, env };
   }
 
@@ -65,6 +84,8 @@ console.log(JSON.stringify({ type: "thread.started", thread_id: "offline-test" }
     expect(instructions).toContain("unavailable data does not mean zero gain and does not prevent a recommendation");
     expect(instructions).toContain("label any production estimate separately with its source, date, assumptions, and uncertainty");
     expect(instructions).toContain("Recommendation preflight");
+    expect(instructions).toContain("Recommendation lifecycle & decision vs. outcome separation");
+    expect(instructions).toContain("RECOMMENDATION CLOSURE");
     expect(instructions).toContain("Compare the proposed starter against our meaningful current bench options");
     expect(instructions).toContain("best reason to decline or use a free alternative");
     expect(instructions).toContain("TRADE — MEDIUM PRIORITY");
@@ -167,6 +188,64 @@ console.log(JSON.stringify({ type: "thread.started", thread_id: "offline-test" }
     expect(args).toContain('approval_policy="never"');
   });
 
+  describe("interactive session reports", () => {
+    const calls = (repo: string) => readFileSync(join(repo, "private/codex-calls.jsonl"), "utf8").trim().split("\n").map((line) => JSON.parse(line) as string[]);
+    const sessionReports = (repo: string) => readdirSync(join(repo, "private/reports")).filter((file) => file.endsWith("-session.md"));
+
+    it("resumes the finished session to save a private dated summary", () => {
+      const { repo, env } = launch();
+      const result = run(repo, { ...env, FAKE_ROLLOUT: "1" }, []);
+      expect(result.status).toBe(0);
+      const [interactive, summary] = calls(repo);
+      expect(interactive).not.toContain("exec");
+      const resume = summary!.indexOf("resume");
+      expect(summary![0]).toBe("exec");
+      expect(summary!.slice(1, resume)).toEqual(interactive);
+      expect(summary!.slice(resume + 1, resume + 3)).toEqual(["sess-1", "--json"]);
+      expect(summary!.at(-1)).toContain("open follow-ups");
+      const [report] = sessionReports(repo);
+      expect(report).toMatch(/^\d{4}-\d{2}-\d{2}T.*-session\.md$/);
+      expect(readFileSync(join(repo, "private/reports", report!), "utf8")).toBe("Verified stub report\n");
+      expect(result.stderr).toContain("Private backup");
+    });
+
+    it("marks a failed or interrupted session incomplete without summarizing", () => {
+      const { repo, env } = launch();
+      expect(run(repo, { ...env, FAKE_ROLLOUT: "1", CODEX_FAIL: "130" }, []).status).toBe(130);
+      expect(calls(repo)).toHaveLength(1);
+      const [report] = sessionReports(repo);
+      expect(readFileSync(join(repo, "private/reports", report!), "utf8")).toMatch(/^# INCOMPLETE GM session\n\nCodex exited with 130/);
+    });
+
+    it("marks the session incomplete when the summary fails", () => {
+      const { repo, env } = launch();
+      expect(run(repo, { ...env, FAKE_ROLLOUT: "1", CODEX_EMPTY: "1" }, []).status).toBe(1);
+      const [report] = sessionReports(repo);
+      expect(readFileSync(join(repo, "private/reports", report!), "utf8")).toMatch(/^# INCOMPLETE GM session\n\nSession summary failed/);
+    });
+
+    it("ignores newer one-shot, subagent, IDE, unreadable and old rollouts", () => {
+      const { repo, env } = launch();
+      expect(run(repo, { ...env, FAKE_ROLLOUT: "decoys" }, []).status).toBe(0);
+      expect(calls(repo)[1]).toContain("sess-1");
+    });
+
+    it("does not resume an older session when this one recorded nothing", () => {
+      const { repo, env } = launch();
+      expect(run(repo, { ...env, FAKE_ROLLOUT: "old" }, []).stderr).toContain("No GM session was recorded");
+      expect(calls(repo)).toHaveLength(1);
+    });
+
+    it("does not summarize a session from another directory", () => {
+      const { repo, env } = launch();
+      const result = run(repo, { ...env, FAKE_ROLLOUT: "elsewhere" }, []);
+      expect(result.status).toBe(0);
+      expect(calls(repo)).toHaveLength(1);
+      expect(sessionReports(repo)).toEqual([]);
+      expect(result.stderr).toContain("No GM session was recorded");
+    });
+  });
+
   it("keeps existing notes and specialist evidence across launches and makes distinct reports", () => {
     const { repo, env } = launch();
     expect(run(repo, env, ["ask", "First assignment"]).status).toBe(0);
@@ -179,6 +258,23 @@ console.log(JSON.stringify({ type: "thread.started", thread_id: "offline-test" }
     expect(readFileSync(record, "utf8")).toBe("Existing specialist evidence");
     expect(readdirSync(join(repo, "private/reports")).filter((file) => file.endsWith(".md"))).toHaveLength(2);
     expect(readdirSync(join(repo, "private/reports")).filter((file) => file.endsWith(".events.jsonl"))).toHaveLength(2);
+  });
+
+  it("seeds recommendations.md with Active/Open and Closed history sections", () => {
+    const { repo, env } = launch();
+    expect(run(repo, env, ["ask", "Check notes"]).status).toBe(0);
+    const text = readFileSync(join(repo, "private/notes/recommendations.md"), "utf8");
+    expect(text).toContain("## Active / Open");
+    expect(text).toContain("## Closed history");
+    expect(text).toContain("`OPEN`, `ACTED`, `DECLINED`, `SUPERSEDED`, `ACTION_UNKNOWN`");
+  });
+
+  it("surfaces private backup status at the conclusion of routine GM runs", () => {
+    const { repo, env } = launch();
+    const result = run(repo, env, ["ask", "Check backup"]);
+    expect(result.status).toBe(0);
+    expect(result.stderr).toContain("Private backup unavailable: no remote tracking branch");
+    expect(result.stderr).toContain('git -C private add -A && git -C private commit -m "..." && git -C private push');
   });
 
   it("passes leading options, quotes, multiline and shell substitution as a literal prompt", () => {

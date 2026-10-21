@@ -13,6 +13,7 @@ import {
   UsageError,
   type Options,
 } from "./commands.ts";
+import { backupCommand } from "./backup.ts";
 import { tradeCommand, valuesCommand } from "./value-commands.ts";
 import { changesCommand } from "./changes.ts";
 import { historyCommand } from "./history.ts";
@@ -41,6 +42,7 @@ const HELP = `ff — validated Sleeper league data for the GM. Every command ver
   ff changes [--no-write]        what changed in the league since the last run (snapshot in private/)
   ff values [me|team] [--league]  dynasty market values (FantasyCalc) for a roster, or every team
   ff trade "<we give>" "<we get>" [--with <team>]  market-value check, e.g. ff trade "Player A, 2027 R2 (own)" "Player B"
+  ff backup                      private repository backup and git sync status
 
   --refresh-players  refresh Sleeper's player database when its 24-hour cache expires, or retry a failed download when there is no cache
 
@@ -137,6 +139,8 @@ export async function run(
       return changesCommand(session, opts);
     case "values":
       return valuesCommand(session, arg, opts);
+    case "backup":
+      return backupCommand(session);
     case "trade":
       return tradeCommand(session, arg, arg2, opts.with);
     default:

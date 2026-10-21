@@ -1,6 +1,6 @@
 # Project State
 
-**Last updated:** 2026-10-20 · **Branch:** `main` (PR #12 merged; specialist staff in [PR #5](https://github.com/allmanr/ff-gm/pull/5)).
+**Last updated:** 2026-10-20 · **Base:** `main` at 2bd34c6 (PR #14). Unmerged, stacked: `feat/issue-7-10-recap-closure-backup-status` (#7, #10) → `feat/issue-9-interactive-session-reports` (#9, #11).
 
 ## Mission
 
@@ -10,8 +10,8 @@ Expected invariants, verified live on every run: dynasty, Superflex, full PPR, T
 
 ## Current architecture (local front office, D-015 / D-019)
 
-- `bin/ff` — TypeScript CLI (Node 24 via `bin/node24`, no build step) over Sleeper's documented API. Every command validates the league and roster ownership first and fails closed (exit 1). 18 commands: context, standings, rosters, roster, picks, free-agents, trending, transactions, waivers, matchups, bench, schedule, player, values, trade, changes, history, help.
-- `bin/ff-gm` — validates context, writes trusted charter/native specialist configuration, and starts the coordinating Codex GM in `private/`. Five native roles: Research Boy, Superflex Dynasty Knower, League Watcher, Rookie Scout and AI Guru; at most three simultaneous staff threads. Sol/high (D-010); validated constitution remains separate untrusted data. `ask`, `brief`, and direct `specialist <role> "…"` calls save unique reports and JSONL events privately. Specialists save evidence under `private/notes/staff/<role>/`; the GM owns canonical notes and the change baseline.
+- `bin/ff` — TypeScript CLI (Node 24 via `bin/node24`, no build step) over Sleeper's documented API. Every command validates the league and roster ownership first and fails closed (exit 1). 19 commands: context, standings, rosters, roster, picks, free-agents, trending, transactions, waivers, matchups, bench, schedule, player, values, trade, changes, history, backup, help.
+- `bin/ff-gm` — validates context, writes trusted charter/native specialist configuration, and starts the coordinating Codex GM in `private/`. Five native roles: Research Boy, Superflex Dynasty Knower, League Watcher, Rookie Scout and AI Guru; at most three simultaneous staff threads. Sol/high (D-010); validated constitution remains separate untrusted data. `ask`, `brief`, and direct `specialist <role> "…"` calls save unique reports and JSONL events privately; interactive sessions end with a saved `-session.md` handoff. Specialists save evidence under `private/notes/staff/<role>/`; the GM owns canonical notes and the change baseline.
 - `bin/ff-dev` — separate Software Dev/SRE primary session rooted in the engineering repository. It can repair failed validation without giving football advice; no engineering role is registered with the GM. Engineering reports stay private. Protected and external actions still require explicit Owner authorization.
 - `private/` — gitignored; its own private GitHub repo `allmanr/ff-gm-private` (D-016).
 - External data (D-018): FantasyCalc market values; nflverse schedule, lines, weekly stats, and Sleeper-ID crosswalk. Supplementary: commands degrade with a note if unavailable.
@@ -19,24 +19,22 @@ Expected invariants, verified live on every run: dynasty, Superflex, full PPR, T
 
 ## Verification status
 
-- 2026-10-20 PR #12 merge gate: merged to main (commit c6bbb2f). `npm run check` passes typecheck, lint, 212 offline tests across 14 files, and artifact-path and identifier checks over 93 indexed files. `git diff --check` passes. GitHub Actions CI check passed. Anonymous staged and committed-export cases reproduced unsafe success before the fix and now fail correctly, including a cloned checkout without `private/`. Regressions cover visible untracked exports, forced-added private files and a private Git link, safe public paths, and redacted diagnostics. Issue #6 closed.
+Current gate (2026-10-20, branch `feat/issue-9-interactive-session-reports`): `npm run check` passes typecheck, lint, 234 offline tests across 15 files, and leak checks over 95 files. Live: `ff backup` reported clean / synced. Throwaway Codex 0.163.0 probes confirmed: `codex exec <options> resume <id> --json -o <file>` keeps the prior context; rollout `payload.id` is that id; a terminal session records `source: "cli"`, `originator: "codex-tui"`; a turnless session writes no rollout; quitting with Ctrl+C exits 0. Mutation checks confirm each session-selection filter is tested. Not run live: a full `ff-gm` session with summary, or a GM recap applying the closure rules.
 
-- 2026-10-20 handoff gate: `npm run check` passes typecheck, lint, 190 offline tests across 14 files, and the existing privacy check over 93 indexed files. `git diff --check` passes. The privacy result does not cover the untracked export or establish CI artifact protection. No fresh live scoring or GM acceptance run was performed.
+Standing live facts (still true until re-checked):
+- `npm run verify-scoring` refuses because nflverse cannot supply `st_ff` and `st_fum_rec` (since 2026-10-02). The earlier 749/749 match assumed those were zero and does not prove coverage. Sleeper's recorded matchup points remain the actuals.
+- Specialist wiring (D-019) was verified live once; evidence is in `private/evaluations/specialist-acceptance/`. This shows wiring and bounded behavior, not advice quality.
+- One bounded GM acceptance run (2026-10-05) is in `private/evaluations/`. It is not a consistency benchmark.
 
-- 2026-10-20 backlog review: six open GitHub issues (#6 through #11), no open PRs. Source inspection confirms the privacy and trade-validation gaps below. This review does not establish fresh live scoring or GM acceptance results. Earlier verification entries are historical.
-
-- Specialist branch final gate: `npm run check` passes typecheck, lint, 187 offline tests across 14 files, and tracked/staged privacy checks. A separate scan of all 13 new public files passes; shell syntax and `git diff --check` pass.
-
-- Specialist integration: live native session metadata confirms all five named custom roles, Sol/high, private workspace/cache writes and approval policy `never`. Each ran `ff context`, read the constitution, completed its bounded assignment and saved a memo that the GM read. A separate live Software Dev/SRE session ran the repository checks; a final direct Research Boy call validated context and saved a unique memo through the completed launcher. OS sandbox probes allow private/cache writes and deny engineering-source and `.codex` writes. Evidence is in `private/evaluations/specialist-acceptance/`; this verifies wiring and bounded behavior, not long-term advice quality.
-- Live scoring verifier still refuses `st_ff, st_fum_rec` after the player-cache/client changes. That known source-coverage limitation remains; no scoring gate was weakened.
-
-- 2026-10-05 review follow-up: `npm run check` passes typecheck, lint, 128 tests, and privacy checks. One bounded live GM acceptance run completed; evidence and its coverage limits are retained under `private/evaluations/`. This is not a consistency benchmark. Deterministic regressions cover saved starters subsequently dropped or placed on Sleeper IR.
-- Final PR #2 pass: `npm run check` passes typecheck, lint, 124 tests, and the privacy scan of Git index blobs and working files. Tests inject supplementary fetchers; a global fetch guard fails any accidental network attempt, even if a command catches the error.
-- Regression tests reproduced manual player-cache bypass, unset-Owner trade checks, even-sample waiver medians, and partial scoring before their fixes. Existing launcher, staged-leak, and two-process FantasyCalc regressions still pass. Launcher tests check instruction/data separation; model obedience was not tested.
-- Live, 2026-10-02: `npm run verify-scoring` now refuses with `st_ff, st_fum_rec`, which nflverse cannot supply. The previous 749/749 comparison assumed those keys were zero and did **not** establish full scoring coverage. Exact nflverse PPG is unavailable until the source covers every active scoring rule; Sleeper's actual matchup points remain usable.
-- Earlier live command and lineup-optimizer checks remain historical evidence; the final pass does not claim a fresh all-command live run.
+Earlier per-PR gates (#2, #5, #12, #14) are recorded in their PRs and in `git log`; they are not repeated here.
 
 ## Done
+
+- [Issue #9, interactive session reports](https://github.com/allmanr/ff-gm/issues/9): when an interactive `ff-gm` session ends, the launcher finds that top-level Codex session (same private cwd, not exec or subagent) and resumes it once with `exec resume` to save `private/reports/<stamp>-session.md` covering actions, recommendations and follow-ups. Failed or interrupted sessions and failed summaries are saved as `# INCOMPLETE GM session`. README documents report names and the weekly commands. Session discovery reads Codex's rollout layout (marked `ponytail:` in `src/gm-launcher.ts`).
+- [Issue #11, status refresh](https://github.com/allmanr/ff-gm/issues/11): header, verification and queue now describe current state; dated per-PR gates were trimmed.
+- [Issue #10, private backup status visibility](https://github.com/allmanr/ff-gm/issues/10): implemented safe, read-only backup status inspection via `ff backup` and surfaced at the conclusion of routine GM runs in `src/gm-launcher.ts`. Checks clean/synced, dirty, ahead, and remote-unavailable states without making network calls or altering git remotes; provides the exact manual backup command when unbacked-up; strictly protects privacy by never printing file names, paths, or diffs.
+
+- [Issue #7, recommendation closure](https://github.com/allmanr/ff-gm/issues/7): established structured `notes/recommendations.md` lifecycle with explicit statuses (`OPEN`, `ACTED`, `DECLINED`, `SUPERSEDED`, `ACTION_UNKNOWN`), `## Active / Open` section at the top for immediate scanning, and `## Closed history`. Strict separation between decision quality (soundness based on facts available at recommendation time) and observed outcome (Sleeper points, results, and variance). Updated `gm/CHARTER.md` (lifecycle, memory, output style examples for lineup, waiver, and trade closures), `src/gm-launcher.ts` seed template, and `gm/briefs/recap.md` step 5 to check Sleeper transactions and matchups and ask the Owner one concise question when an action cannot be verified.
 
 - [Issue #8, trade ownership and advice preflight](https://github.com/allmanr/ff-gm/issues/8): `ff trade` enforces ownership of "we give" assets, validates that "we get" assets are held by the counterparty (free agents are rejected), resolves draft picks to unambiguous owned picks with original team tracking, and takes the counterparty from `--with <team>` or the get-side players, refusing to guess. Merged in [PR #14](https://github.com/allmanr/ff-gm/pull/14). Added the recommendation preflight and reviewed trade example to `gm/CHARTER.md` and `gm/briefs/war-room.md`, separating market prices, recorded actual points, and forward estimates while comparing against bench replacements and counterparty decline incentives.
 
@@ -57,21 +55,14 @@ Expected invariants, verified live on every run: dynasty, Superflex, full PPR, T
 
 ## Open (impact → verdict)
 
-### Recommended engineering queue, checked 2026-10-20
+### Engineering queue
 
-This order is an engineering recommendation. Issue #6 was resolved in [PR #12](https://github.com/allmanr/ff-gm/pull/12); Issue #8 was resolved in [PR #14](https://github.com/allmanr/ff-gm/pull/14). The remaining implementation queue follows.
-
-| Order | Ticket | Impact and verdict | Evidence and scope |
-|---|---|---|---|
-| 1 | [#7, recommendation closure](https://github.com/allmanr/ff-gm/issues/7) | Unresolved recommendations prevent evaluating advice quality. P1, fix. | The ticket reports pending private entries. `gm/briefs/recap.md` already asks for closure, so verify the workflow against anonymous examples rather than adding another general reminder. Private ledger status was not independently audited in this review. |
-| 2 | [#10, private backup visibility](https://github.com/allmanr/ff-gm/issues/10) | Machine loss could destroy unbacked-up work. P1, fix. | Add read-only dirty, ahead, synced, and unavailable status. The ticket reports unbacked-up work. Current private Git state was not checked in this review. No automatic commit or push. |
-| 3 | [#9, interactive session reports](https://github.com/allmanr/ff-gm/issues/9) | Missing reports make weekly use and follow-ups hard to assess. P2, fix after the advice loop. | The ticket identifies the interactive launcher path as lacking the final reports saved by one-shot runs. Preserve manual operation without adding a scheduler. |
-| 4 | [#11, current-status refresh](https://github.com/allmanr/ff-gm/issues/11) | Stale onboarding facts waste engineering time. P2, fix alongside the first change. | Header, queue, and verification gates refreshed following PR #12 merge. |
+No open implementation tickets once the two stacked branches merge. The next work comes from the limitations below or from Owner direction. Before merging #9, run one real `ff-gm` session and confirm it saves a `-session.md` summary → fix if it does not.
 
 ### Existing limitations and deferred work
 
 - **nflverse scoring coverage** — no PPG/last-3 rankings while `st_ff` and `st_fum_rec` are unavailable: the `ff free-agents` PPG/L3 columns are blank, `--sort ppg` falls back to market value, `ff player` shows no scored stat lines, and `npm run verify-scoring` exits nonzero. The safe refusal is fixed; expanding source coverage is deferred. Use Sleeper recorded matchup points meanwhile. Free-agent evaluation is the main user-facing gap → fix when a permitted source covers both keys.
-- **Private backup push** — automatic push after GM sessions was blocked by the session permission policy. Run `git -C private push` after sessions. Data-loss risk only if this machine fails → Owner habit.
+- **Private backup push** — `ff backup` and the end-of-run notice show unbacked-up state (Issue #10). Automatic push after GM sessions remains blocked by session permission policy (D-008/D-016). Run the displayed manual backup command `git -C private add -A && git -C private commit -m "..." && git -C private push` as needed. Data-loss risk only if this machine fails → Owner habit.
 - **Scheduled briefs + notifications** — needs a channel choice and a cron job on the Owner's machine (runs only while it is awake). → Owner decides.
 - **Plus usage** — one deep GM run used ~189k tokens. Use `FF_GM_EFFORT=medium` for routine questions; watch Codex limits in heavy weeks.
 - **Projections** — Sleeper supplies exact recorded matchup points; there is still no forward projection feed. Options: derive from nflverse stats or FantasyPros API ($8.99/mo). → defer until the GM's web research proves insufficient.
