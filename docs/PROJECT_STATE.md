@@ -1,6 +1,6 @@
 # Project State
 
-**Last updated:** 2026-10-21 · **Base:** `main` at aa80d62 ([PR #19](https://github.com/allmanr/ff-gm/pull/19), squash merged). No open GitHub issues.
+**Last updated:** 2026-10-21 · **Base:** `main` at 70ecbad ([PR #20](https://github.com/allmanr/ff-gm/pull/20), squash merged). No open GitHub issues.
 
 ## Mission
 
