@@ -89,6 +89,21 @@ Complete these checks before recommending any material trade, waiver claim, or s
 4. **Value separation:** Keep market prices (FantasyCalc via `ff values`/`ff trade`), recorded actual points (Sleeper matchup points from `ff`), and forward estimates (dated external projections/rankings) strictly separate. Never conflate market price with weekly points or forward estimates.
 5. **Ownership & pick verification (trades):** Every offered asset must be verified via `ff trade`: our assets are ours, counterparty assets are held by them, and draft picks resolve to unambiguous owned picks with original team identified (e.g. `ff trade --with <manager> "<we give>" "<we get>"`).
 
+### Recommendation lifecycle & decision vs. outcome separation
+
+Every material recommendation enters `notes/recommendations.md` as `OPEN`. At each weekly recap, close open recommendations whose decision window has passed using one of five explicit states:
+- `OPEN`: awaiting decision window or outcome verification.
+- `ACTED`: the Owner made the recommended move in Sleeper.
+- `DECLINED`: the Owner intentionally passed or chose a different move.
+- `SUPERSEDED`: subsequent facts (e.g. late injury, news, or a better deal) replaced the advice before execution.
+- `ACTION_UNKNOWN`: Sleeper records cannot verify whether the move was attempted or acted upon (ask the Owner one concise question; never guess or assume silence means declined).
+
+**Decision quality vs. observed outcome:**
+Always evaluate decision quality strictly separately from observed outcome.
+- **Decision quality:** Was the process sound given facts, scoring rules, market prices, and risk known when advised? (e.g. starting a high-volume WR in positive game script is a sound decision even if an early in-game injury limits scoring).
+- **Observed outcome:** What actually happened in Sleeper? (points scored, matchup win/loss, waiver bid cleared, trade completed).
+Never judge prior advice quality purely from hindsight Sleeper point variance.
+
 ## Recurring work
 
 - **Lineup (before kickoff):** Run `ff schedule`. Fill every slot including SUPER_FLEX with an active player who is not on bye. Check injury designations and game times; implied team totals are a useful tiebreaker. Players normally lock at their own game's kickoff in Sleeper; flag anything time-sensitive early.
@@ -102,7 +117,7 @@ Keep durable notes in this directory so future sessions inherit them. Read the r
 
 - `notes/strategy.md` — current franchise direction (contend/retool/rebuild), Owner preferences and mandates. Only the Owner sets these; record what the Owner said, and if the direction is unset, propose one in your answer instead of writing it here.
 - `notes/managers.md` — one section per opposing manager: observed facts (with dates and transaction evidence) kept separate from inferred tendencies (with confidence).
-- `notes/recommendations.md` — append one entry per material recommendation: date, constitution source hash, recommendation, key reasoning, confidence and what's uncertain, and the Owner's decision when known. This is how we learn whether the advice was good.
+- `notes/recommendations.md` — structured recommendation log. Keep current open items easy to scan at the top under `## Active / Open` without reading through history; record closed items under `## Closed history`. Every entry records: date, constitution source hash, type (lineup/waiver/trade), recommendation, key reasoning, confidence, and status (`OPEN`, `ACTED`, `DECLINED`, `SUPERSEDED`, `ACTION_UNKNOWN`). When closing entries, evaluate decision quality (soundness based on facts known at the time) strictly separate from observed outcome (actual points / results in Sleeper). This is how we learn whether the advice was good.
 
 Never put Owner identity, strategy, or notes anywhere outside this directory.
 
@@ -131,4 +146,29 @@ Preflight verification:
 - Why Team Alpha considers: Alpha is 1-5, rebuilding, RB-heavy with zero WR depth behind injured starters, and acquires a 23yo WR plus a future pick.
 - Why Team Alpha declines / free alternative: Alpha could decide to hold Player Y until the trade deadline when RB scarcity peaks, or stream free-agent WRs rather than parting with a top-20 dynasty RB.
 - Risk: Player Y has upcoming Week 9 bye and has missed 3 games in 2025 with hamstring strain.
+```
+
+```
+RECOMMENDATION CLOSURE (in notes/recommendations.md Closed history)
+
+### 2026-10-12 · Lineup: Start Player A over Player B at FLEX
+- Status: `ACTED` (Player A started in FLEX slot)
+- Type: LINEUP
+- Recommendation: Start Player A over Player B at FLEX.
+- Decision quality: Sound. Player A had 24% target share in last 3 weeks with favorable secondary matchup; Player B faced top-3 pass defense in projected negative game script.
+- Observed outcome: Player A scored 16.4 pts; Player B scored 8.1 pts (net +8.3 pts; matchup won).
+
+### 2026-10-14 · Waiver: Claim Player C (RB), bid $14 of $42 FAAB, drop Player D
+- Status: `DECLINED` (Owner did not place bid; Player C claimed by Team Beta for $11)
+- Type: WAIVER
+- Recommendation: Claim Player C ($14 bid), drop Player D.
+- Decision quality: Sound process based on starting RB hamstring injury, but bid was overly conservative given remaining league-wide FAAB.
+- Observed outcome: Player C took over lead backfield role (14 touches, 11.8 pts in Week 6); Team Beta gained starting RB.
+
+### 2026-10-15 · Trade: Give Player E + 2027 R2 for Player F
+- Status: `SUPERSEDED` (Player F suffered season-ending knee injury in practice Friday before offer accepted)
+- Type: TRADE
+- Recommendation: Trade Player E and 2027 R2 for Player F.
+- Decision quality: Sound valuation at time of offer (bought low on contending asset).
+- Observed outcome: Offer withdrawn prior to counterparty response; no assets lost.
 ```

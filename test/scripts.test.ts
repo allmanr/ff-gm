@@ -24,7 +24,7 @@ describe("GM launcher", () => {
   function setup() {
     const repo = sandbox();
     for (const file of ["ff-gm", "ff-dev", "node24"]) copyFileSync(join(repoRoot, "bin", file), join(repo, "bin", file));
-    for (const file of ["gm-launcher.ts", "staff.ts", "private-files.ts"]) copyFileSync(join(repoRoot, "src", file), join(repo, "src", file));
+    for (const file of ["gm-launcher.ts", "staff.ts", "private-files.ts", "backup.ts", "format.ts"]) copyFileSync(join(repoRoot, "src", file), join(repo, "src", file));
     cpSync(join(repoRoot, "gm"), join(repo, "gm"), { recursive: true });
     writeFileSync(join(repo, "bin/ff"), '#!/usr/bin/env bash\n[[ "$1" == context ]] || exit 2\n[[ "${FAIL_CONTEXT:-}" != 1 ]] || exit 1\ncp "$FF_PRIVATE_DIR/seed.md" "$FF_PRIVATE_DIR/LEAGUE_CONSTITUTION.md"\n', { mode: 0o755 });
     writeFileSync(join(repo, "bin/codex"), `#!/usr/bin/env ${process.execPath}
@@ -65,6 +65,8 @@ console.log(JSON.stringify({ type: "thread.started", thread_id: "offline-test" }
     expect(instructions).toContain("unavailable data does not mean zero gain and does not prevent a recommendation");
     expect(instructions).toContain("label any production estimate separately with its source, date, assumptions, and uncertainty");
     expect(instructions).toContain("Recommendation preflight");
+    expect(instructions).toContain("Recommendation lifecycle & decision vs. outcome separation");
+    expect(instructions).toContain("RECOMMENDATION CLOSURE");
     expect(instructions).toContain("Compare the proposed starter against our meaningful current bench options");
     expect(instructions).toContain("best reason to decline or use a free alternative");
     expect(instructions).toContain("TRADE — MEDIUM PRIORITY");
@@ -179,6 +181,23 @@ console.log(JSON.stringify({ type: "thread.started", thread_id: "offline-test" }
     expect(readFileSync(record, "utf8")).toBe("Existing specialist evidence");
     expect(readdirSync(join(repo, "private/reports")).filter((file) => file.endsWith(".md"))).toHaveLength(2);
     expect(readdirSync(join(repo, "private/reports")).filter((file) => file.endsWith(".events.jsonl"))).toHaveLength(2);
+  });
+
+  it("seeds recommendations.md with Active/Open and Closed history sections", () => {
+    const { repo, env } = launch();
+    expect(run(repo, env, ["ask", "Check notes"]).status).toBe(0);
+    const text = readFileSync(join(repo, "private/notes/recommendations.md"), "utf8");
+    expect(text).toContain("## Active / Open");
+    expect(text).toContain("## Closed history");
+    expect(text).toContain("`OPEN`, `ACTED`, `DECLINED`, `SUPERSEDED`, `ACTION_UNKNOWN`");
+  });
+
+  it("surfaces private backup status at the conclusion of routine GM runs", () => {
+    const { repo, env } = launch();
+    const result = run(repo, env, ["ask", "Check backup"]);
+    expect(result.status).toBe(0);
+    expect(result.stderr).toContain("Private backup unavailable: no remote tracking branch");
+    expect(result.stderr).toContain('git -C private add -A && git -C private commit -m "..." && git -C private push');
   });
 
   it("passes leading options, quotes, multiline and shell substitution as a literal prompt", () => {

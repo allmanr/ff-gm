@@ -104,6 +104,7 @@ Back up GM notes after sessions: `git -C private add -A && git -C private commit
 | Is this trade fair on market value? | `ff trade "Player A, 2027 R2 (own)" "Player B" --with <manager>` |
 | Future pick ownership | `ff picks` |
 | A manager's trade history and tendencies | `ff history <manager>` |
+| Private repository backup status | `ff backup` |
 
 `ff help` lists every option. Exit codes: 0 ok · 1 league validation failed (no football output) · 2 usage · 3 Sleeper/network error · 4 other error. `--refresh-players` honors the same 24-hour cache as normal commands; with no usable cache it retries a download that failed earlier that day.
 
