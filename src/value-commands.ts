@@ -107,7 +107,7 @@ export async function valuesCommand(session: Session, who: string | undefined, o
   ].join("\n");
 }
 
-type TradeAsset = { label: string; value: number | null; holder: string; playerId?: string };
+type TradeAsset = { label: string; value: number | null; holder: string };
 
 type ParsedPickSpec = {
   season: string;
@@ -306,7 +306,7 @@ export async function tradeCommand(
   }
 
   // 2. Resolve "we give" assets
-  const giveAssets: TradeAsset[] = await Promise.all(rawGiveSpecs.map(async (spec) => {
+  const giveAssets: TradedAsset[] = await Promise.all(rawGiveSpecs.map(async (spec) => {
     const pick = parsePickSpec(spec, db);
     if (pick) {
       return resolvePickAsset(session, spec, pick, ownerRosterId, true, ctx, picks, book);
@@ -325,7 +325,7 @@ export async function tradeCommand(
   }));
 
   // 3. Resolve "we get" assets
-  const getAssets: TradeAsset[] = await Promise.all(rawGetSpecs.map(async (spec) => {
+  const getAssets: TradedAsset[] = await Promise.all(rawGetSpecs.map(async (spec) => {
     const pick = parsePickSpec(spec, db);
     if (pick) {
       return resolvePickAsset(session, spec, pick, targetRoster.roster_id, false, ctx, picks, book);
@@ -382,21 +382,24 @@ export async function tradeCommand(
     .join("\n");
 }
 
+/** A resolved trade asset; players carry their Sleeper ID for the roster and lineup impact. */
+type TradedAsset = TradeAsset & { playerId?: string };
+
 /** Both teams' roster counts and best lineups before and after the trade, from Sleeper data only. */
 async function impactSection(
   session: Session,
   db: PlayerDb,
   ownerRosterId: number,
   target: Roster,
-  give: TradeAsset[],
-  get: TradeAsset[],
+  give: TradedAsset[],
+  get: TradedAsset[],
 ): Promise<string[]> {
   const { ctx, league, rosters } = await session.data();
   const { weeks, points } = await seasonPoints(session);
   const lastScored = league.settings.last_scored_leg ?? 0;
   const avg = (id: string) => seasonAverage(points.get(id), weeks, lastScored).avg;
   const injured = new Set(rosters.flatMap((r) => r.reserve));
-  const ids = (xs: TradeAsset[]) => xs.flatMap((x) => x.playerId ?? []);
+  const ids = (xs: TradedAsset[]) => xs.flatMap((x) => x.playerId ?? []);
   const ours = rosters.find((r) => r.roster_id === ownerRosterId)!;
   const sides = [
     tradeImpact({ ctx, db, roster: ours, sent: ids(give), received: ids(get), injured, avg }),
