@@ -15,7 +15,8 @@ export type PickOwnership = {
 /**
  * Sleeper's traded_picks lists only picks that have moved. Every roster starts with its own pick in
  * each round of each future season; traded entries override the current owner.
- * Seasons covered: the next undrafted season through the furthest season seen in traded picks.
+ * Seasons covered: the next undrafted season through the furthest season seen in traded picks, or
+ * `throughSeason` if later (no traded entry exists past the furthest one, so every team holds its own).
  * Sleeper does not expose the tradeable horizon, so callers must label it.
  */
 export function derivePickOwnership(args: {
@@ -24,11 +25,12 @@ export function derivePickOwnership(args: {
   rosters: Roster[];
   tradedPicks: PickRef[];
   drafts: Draft[];
+  throughSeason?: string | undefined;
 }): { seasons: string[]; picks: PickOwnership[] } {
   const season = Number(args.leagueSeason);
   const currentDraftDone = args.drafts.some((d) => d.season === args.leagueSeason && d.status === "complete");
   const first = currentDraftDone ? season + 1 : season;
-  const furthest = Math.max(first, ...args.tradedPicks.map((p) => Number(p.season)));
+  const furthest = Math.max(first, Number(args.throughSeason ?? first), ...args.tradedPicks.map((p) => Number(p.season)));
   const seasons: string[] = [];
   for (let y = first; y <= furthest; y++) seasons.push(String(y));
 

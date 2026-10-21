@@ -38,6 +38,8 @@ Expected invariants, verified live on every run: dynasty, Superflex, full PPR, T
 
 ## Done
 
+- [Issue #8, trade ownership and advice preflight](https://github.com/allmanr/ff-gm/issues/8): `ff trade` enforces ownership of "we give" assets, validates that "we get" assets are held by the counterparty (free agents are rejected), resolves draft picks to unambiguous owned picks with original team tracking, and takes the counterparty from `--with <team>` or the get-side players, refusing to guess. Merged in [PR #14](https://github.com/allmanr/ff-gm/pull/14). Added the recommendation preflight and reviewed trade example to `gm/CHARTER.md` and `gm/briefs/war-room.md`, separating market prices, recorded actual points, and forward estimates while comparing against bench replacements and counterparty decline incentives.
+
 - [Issue #6, private session export guard](https://github.com/allmanr/ff-gm/issues/6): merged in [PR #12](https://github.com/allmanr/ff-gm/pull/12). Artifact-path checks run without private context, and existing identifier and staged-blob checks remain. The README documents private export storage and the limit on detecting arbitrarily renamed strategy text. The plan advances to issue #8; ticket closed on merge.
 
 - Specialist staff (D-019): trusted versioned role prompts/registry, native delegation, direct specialist calls, independent private evidence records, separate engineering entrypoint, and private execution logs. Launcher rejects arbitrary Codex flags, traversing brief names, unsafe private roots, symlinked generated files and unexpected football-workspace agent definitions.
@@ -57,20 +59,18 @@ Expected invariants, verified live on every run: dynasty, Superflex, full PPR, T
 
 ### Recommended engineering queue, checked 2026-10-20
 
-This order is an engineering recommendation. Issue #6 was resolved in [PR #12](https://github.com/allmanr/ff-gm/pull/12). The remaining implementation queue follows.
+This order is an engineering recommendation. Issue #6 was resolved in [PR #12](https://github.com/allmanr/ff-gm/pull/12); Issue #8 was resolved in [PR #14](https://github.com/allmanr/ff-gm/pull/14). The remaining implementation queue follows.
 
 | Order | Ticket | Impact and verdict | Evidence and scope |
 |---|---|---|---|
-| 1 | [#8, trade ownership and advice preflight](https://github.com/allmanr/ff-gm/issues/8) | Invalid asset sides or ambiguous picks can produce an unsound proposal. P1, fix. | `src/value-commands.ts` resolves both sides identically, prices picks by season and round, and displays holders without enforcing ownership. Add ownership checks and a focused recommendation preflight. |
-| 2 | [#7, recommendation closure](https://github.com/allmanr/ff-gm/issues/7) | Unresolved recommendations prevent evaluating advice quality. P1, fix. | The ticket reports pending private entries. `gm/briefs/recap.md` already asks for closure, so verify the workflow against anonymous examples rather than adding another general reminder. Private ledger status was not independently audited in this review. |
-| 3 | [#10, private backup visibility](https://github.com/allmanr/ff-gm/issues/10) | Machine loss could destroy unbacked-up work. P1, fix. | Add read-only dirty, ahead, synced, and unavailable status. The ticket reports unbacked-up work. Current private Git state was not checked in this review. No automatic commit or push. |
-| 4 | [#9, interactive session reports](https://github.com/allmanr/ff-gm/issues/9) | Missing reports make weekly use and follow-ups hard to assess. P2, fix after the advice loop. | The ticket identifies the interactive launcher path as lacking the final reports saved by one-shot runs. Preserve manual operation without adding a scheduler. |
-| 5 | [#11, current-status refresh](https://github.com/allmanr/ff-gm/issues/11) | Stale onboarding facts waste engineering time. P2, fix alongside the first change. | Header, queue, and verification gates refreshed following PR #12 merge. |
+| 1 | [#7, recommendation closure](https://github.com/allmanr/ff-gm/issues/7) | Unresolved recommendations prevent evaluating advice quality. P1, fix. | The ticket reports pending private entries. `gm/briefs/recap.md` already asks for closure, so verify the workflow against anonymous examples rather than adding another general reminder. Private ledger status was not independently audited in this review. |
+| 2 | [#10, private backup visibility](https://github.com/allmanr/ff-gm/issues/10) | Machine loss could destroy unbacked-up work. P1, fix. | Add read-only dirty, ahead, synced, and unavailable status. The ticket reports unbacked-up work. Current private Git state was not checked in this review. No automatic commit or push. |
+| 3 | [#9, interactive session reports](https://github.com/allmanr/ff-gm/issues/9) | Missing reports make weekly use and follow-ups hard to assess. P2, fix after the advice loop. | The ticket identifies the interactive launcher path as lacking the final reports saved by one-shot runs. Preserve manual operation without adding a scheduler. |
+| 4 | [#11, current-status refresh](https://github.com/allmanr/ff-gm/issues/11) | Stale onboarding facts waste engineering time. P2, fix alongside the first change. | Header, queue, and verification gates refreshed following PR #12 merge. |
 
 ### Existing limitations and deferred work
 
 - **nflverse scoring coverage** — no PPG/last-3 rankings while `st_ff` and `st_fum_rec` are unavailable: the `ff free-agents` PPG/L3 columns are blank, `--sort ppg` falls back to market value, `ff player` shows no scored stat lines, and `npm run verify-scoring` exits nonzero. The safe refusal is fixed; expanding source coverage is deferred. Use Sleeper recorded matchup points meanwhile. Free-agent evaluation is the main user-facing gap → fix when a permitted source covers both keys.
-- **`ff trade` does not check sides** — it does not verify that "we give" assets are ours or that "we get" assets are not, and picks resolve by season and round only (no original team, no ownership check). The "On roster" column shows holders but does not prevent an invalid proposal. Superseded by the P1 fix scope in issue #8 above.
 - **Private backup push** — automatic push after GM sessions was blocked by the session permission policy. Run `git -C private push` after sessions. Data-loss risk only if this machine fails → Owner habit.
 - **Scheduled briefs + notifications** — needs a channel choice and a cron job on the Owner's machine (runs only while it is awake). → Owner decides.
 - **Plus usage** — one deep GM run used ~189k tokens. Use `FF_GM_EFFORT=medium` for routine questions; watch Codex limits in heavy weeks.

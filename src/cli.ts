@@ -40,7 +40,7 @@ const HELP = `ff — validated Sleeper league data for the GM. Every command ver
   ff history [manager] [--limit N]  trades across all seasons with per-manager tendencies
   ff changes [--no-write]        what changed in the league since the last run (snapshot in private/)
   ff values [me|team] [--league]  dynasty market values (FantasyCalc) for a roster, or every team
-  ff trade "<we give>" "<we get>"  market-value check, e.g. ff trade "Player A, 2027 R2" "Player B"
+  ff trade "<we give>" "<we get>" [--with <team>]  market-value check, e.g. ff trade "Player A, 2027 R2 (own)" "Player B"
 
   --refresh-players  refresh Sleeper's player database when its 24-hour cache expires, or retry a failed download when there is no cache
 
@@ -63,6 +63,7 @@ function parseOptions(argv: string[]) {
       league: { type: "boolean" },
       sort: { type: "string" },
       "refresh-players": { type: "boolean" },
+      with: { type: "string" },
       help: { type: "boolean", short: "h" },
     },
   });
@@ -86,6 +87,7 @@ function parseOptions(argv: string[]) {
   if (values.type) opts.type = values.type;
   if (values["no-write"]) opts.write = false;
   if (values.league) opts.league = true;
+  if (values.with) opts.with = values.with;
   if (values.sort !== undefined) {
     if (values.sort !== "value" && values.sort !== "ppg") throw new UsageError("--sort must be value or ppg");
     opts.sort = values.sort;
@@ -136,7 +138,7 @@ export async function run(
     case "values":
       return valuesCommand(session, arg, opts);
     case "trade":
-      return tradeCommand(session, arg, arg2);
+      return tradeCommand(session, arg, arg2, opts.with);
     default:
       throw new UsageError(command ? `Unknown command "${command}".\n\n${HELP}` : HELP);
   }
