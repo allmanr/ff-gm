@@ -11,7 +11,7 @@ A private fantasy-football front office with public source code. The Owner makes
 
 ## Setup
 
-Requires GNU/Linux, Node 24+ (`nvm install 24`; `ff` finds an nvm-installed Node 24 even if your default is older), and util-linux `flock` for the shared player-cache lock. The GM requires a Codex CLI with native custom-agent support, signed in to ChatGPT (tested with 0.160.1).
+Requires GNU/Linux, Node 24+ (`nvm install 24`; `ff` finds an nvm-installed Node 24 even if your default is older), and util-linux `flock` for the shared player-cache lock. The GM requires a Codex CLI with native custom-agent support, signed in to ChatGPT. Interactive session capture was tested with 0.163.0.
 
 ```bash
 npm ci
@@ -43,8 +43,8 @@ Every brief reads `private/notes/strategy.md`, so set the direction before relyi
 
 | When | Run | You get |
 |---|---|---|
-| Tue, after Monday Night Football | `ff-gm brief recap` | Result and deciding slots, points left on the bench, standings, league moves (logged to manager notes) |
-| Tue | `ff-gm brief war-room` | Next week's lineup plan, waiver claims with FAAB bids and drops, up to two trade ideas with opening offer and walk-away price |
+| Tue, after Monday Night Football | `ff-gm brief recap` | Result and deciding slots, points left on the bench, standings, league moves, and recommendation closures |
+| Tue | `ff-gm brief war-room` | Next week's lineup plan, waiver claims with FAAB bids and drops, rechecked trade ideas and worthwhile new offers with walk-away prices |
 | Wed ~11:00 AM CT | — | Main waiver run (daily runs ~11:01 AM CT; `ff waivers` shows observed times) |
 | Before Thursday and Sunday kickoffs | `ff-gm brief lineup` | Keep or swap for each slot, with injury and inactive checks |
 | Any day | `ff-gm brief daily` | Under 15 lines of what changed, or "Nothing actionable today" |
@@ -52,6 +52,10 @@ Every brief reads `private/notes/strategy.md`, so set the direction before relyi
 | Anytime | `ff-gm` | Interactive session |
 
 Answers from `ask`, `brief` and direct specialist calls are saved to unique files in `private/reports/`, named `<UTC timestamp>-<id>[-<brief or specialist>].md` (e.g. `…-recap.md`, `…-lineup.md`), with adjacent `.events.jsonl` execution logs. Failed runs retain events and exit nonzero; an empty final report is a failure. When an interactive `ff-gm` session ends, the GM resumes it once to save a handoff (material actions, recommendations, open follow-ups) as `…-session.md`; a failed or interrupted session, or a failed summary, is saved as `# INCOMPLETE GM session` instead. `ls private/reports/*-recap.md` shows which weeks the routine ran. Brief prompts live in `gm/briefs/`.
+
+After an answer finishes, Ctrl+C exits the interactive session and starts the handoff turn. A session with no recorded conversation prints a notice instead of saving a summary. Session discovery depends on Codex's local rollout layout.
+
+The GM keeps material recommendations in `private/notes/recommendations.md`, with active items above closed history. Weekly recaps record explicit statuses and assess decision quality separately from Sleeper results; unverifiable actions remain `ACTION_UNKNOWN` until the Owner clarifies them.
 
 The GM defaults to `gpt-6-sol` with high reasoning; one deep run can use ~190k tokens. Set `FF_GM_MODEL` / `FF_GM_EFFORT` to change it, e.g. `FF_GM_EFFORT=medium ff-gm ask "…"` for routine questions.
 
@@ -82,7 +86,7 @@ Each football specialist validates context, queries `ff`, and saves evidence und
 
 Football sessions use the shared `.local/cache/` player cache and can write the private workspace and tool cache; the sandbox protects engineering source and `.codex` configuration. Software Dev/SRE is a separate primary session with repository writes and approval requests for actions beyond that sandbox. Its reports stay under `private/reports/engineering/`; `FF_DEV_MODEL` / `FF_DEV_EFFORT` override Sol/high. It can repair failed context validation without producing football advice. Commits, pushes, deployments, destructive actions and protected changes still need explicit Owner authorization. Launchers accept the documented commands, not arbitrary Codex flags.
 
-Back up GM notes after sessions: `git -C private add -A && git -C private commit -m notes && git -C private push`.
+Successful one-shot GM runs and interactive exits print private backup status. Run `ff backup` to inspect it separately. The check reads local Git state and compares commits with the last-known upstream ref; it does not contact the remote or verify remote availability. When backup is needed, it prints a manual command. Back up GM notes after sessions: `git -C private add -A && git -C private commit -m notes && git -C private push`.
 
 ## `ff` commands
 
