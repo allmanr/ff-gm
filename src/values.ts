@@ -47,10 +47,16 @@ export function valueFormat(ctx: LeagueContext): { format: ValueFormat; notes: s
   };
 }
 
+export type PickTiers = { early?: number; mid?: number; late?: number };
+export const PICK_TIER_NOTE =
+  "FantasyCalc tier boundaries are undocumented; early/mid/late is the market's label, not this league's slot.";
+
 export type ValueBook = {
   byPlayer: Map<string, MarketValue>;
   /** Generic pick values keyed like "2027 1st". */
   picks: Map<string, number>;
+  /** FantasyCalc's Early/Mid/Late prices, keyed like `picks`; FantasyCalc lists them for the next draft only. */
+  pickTiers: Map<string, PickTiers>;
   fetchedAtMs: number;
   stale: boolean;
   label: string;
@@ -150,10 +156,17 @@ export async function loadValueBook(opts: LoadOptions): Promise<ValueBook> {
 
   const byPlayer = new Map<string, MarketValue>();
   const picks = new Map<string, number>();
+  const pickTiers = new Map<string, PickTiers>();
   for (const r of rows) {
     if (r.player.position === "PICK") {
-      // Generic picks are named like "2027 1st"; early/mid/late variants are ignored for consistency.
+      // Generic picks are named like "2027 1st" and stay the headline value; tier rows like
+      // "2027 1st (Early)" only widen it into a range.
       if (/^\d{4} \d(st|nd|rd|th)$/.test(r.player.name)) picks.set(r.player.name, r.value);
+      const tier = r.player.name.match(/^(\d{4} \d(?:st|nd|rd|th)) \((Early|Mid|Late)\)$/);
+      if (tier) {
+        const key = tier[1]!;
+        pickTiers.set(key, { ...pickTiers.get(key), [tier[2]!.toLowerCase()]: r.value });
+      }
     } else if (r.player.sleeperId) {
       byPlayer.set(r.player.sleeperId, r);
     }
@@ -163,10 +176,17 @@ export async function loadValueBook(opts: LoadOptions): Promise<ValueBook> {
     `${FANTASYCALC_ATTRIBUTION} — dynasty, ${format.numQbs === "2" ? "Superflex/2QB" : "1QB"}, ${format.numTeams} teams, ` +
     `PPR ${format.ppr}, TE ${format.tep}; as of ${new Date(fetchedAtMs).toISOString()}${stale ? " (STALE: refresh unavailable)" : ""}.` +
     (notes.length ? ` ${notes.join(" ")}` : "");
-  return { byPlayer, picks, fetchedAtMs, stale, label };
+  return { byPlayer, picks, pickTiers, fetchedAtMs, stale, label };
 }
 
 export function pickKey(season: string, round: number): string {
   const suffix = round === 1 ? "st" : round === 2 ? "nd" : round === 3 ? "rd" : "th";
   return `${season} ${round}${suffix}`;
+}
+
+/** Lowest and highest tier price for a pick, or undefined when FantasyCalc has no tier rows for it. */
+export function pickTierRange(book: ValueBook, key: string): { lo: number; hi: number } | undefined {
+  const t = book.pickTiers.get(key);
+  const vs = t ? [t.early, t.mid, t.late].filter((v): v is number => v !== undefined) : [];
+  return vs.length ? { lo: Math.min(...vs), hi: Math.max(...vs) } : undefined;
 }
