@@ -182,6 +182,9 @@ export async function rosterCommand(session: Session, who: string | undefined): 
     const vals = weeks.map((w) => wk?.get(w)?.points);
     const scored = weeks.filter((w) => w <= lastScored).map((w) => wk?.get(w)?.points).filter((v): v is number => v !== undefined);
     const total = scored.reduce((a, b) => a + b, 0);
+    // Sleeper records 0 for a rostered player on bye, IR or inactive, so those weeks would drag the average down.
+    // ponytail: a genuine 0.0 game is skipped too; use nflverse participation if that distortion ever matters.
+    const played = scored.filter((v) => v !== 0);
     return [
       slot,
       playerName(db, id),
@@ -192,7 +195,7 @@ export async function rosterCommand(session: Session, who: string | undefined): 
       byes && p?.team ? (byes.get(p.team)?.join("/") ?? "?") : "-",
       ...vals.map((v) => pts(v)),
       scored.length ? pts(total) : "-",
-      scored.length ? pts(total / scored.length) : "-",
+      played.length ? pts(total / played.length) : "-",
       values.book?.byPlayer.get(id)?.value ?? "-",
     ];
   };
@@ -225,7 +228,7 @@ export async function rosterCommand(session: Session, who: string | undefined): 
     "",
     table(["Slot", "Player", "Pos", "NFL", "Age", "Inj", "Bye", ...weekHeaders, "Total", "Avg", "Value"], rows),
     "",
-    `Points are this league's scoring (Sleeper players_points), including bench weeks; "-" = not on a league roster that week.` +
+    `Points are this league's scoring (Sleeper players_points), including bench weeks; "-" = not on a league roster that week. Avg skips 0.0 weeks (bye, IR, inactive).` +
       (weeks.some((w) => w > lastScored) ? " * = week in progress, excluded from totals." : ""),
     "",
     `Future picks (${seasons.join(", ")}): ${formatPicks(ctx, owned, r.roster_id)}`,

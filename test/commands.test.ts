@@ -47,6 +47,22 @@ describe("commands on recorded data", () => {
     expect(out).toMatch(/Future picks \(2027/);
   });
 
+  it("averages a player's points over weeks he scored, not bye/IR zeros", async () => {
+    const rosters = fixture<{ roster_id: number; starters: string[] }[]>("rosters");
+    const id = rosters.find((r) => r.roster_id === FIXTURE_OWNER_ROSTER)!.starters[0]!;
+    // Weeks 1-2 record the player at 0.0, as Sleeper does for a rostered player on bye or IR.
+    const zeroWeek = mutated<{ players_points: Record<string, number> }[]>("matchups_3", (ms) => {
+      for (const m of ms) if (id in m.players_points) m.players_points[id] = 0;
+    });
+    const week3 = fixture<{ players_points: Record<string, number> }[]>("matchups_3").find((m) => id in m.players_points)!.players_points[id]!;
+    const { session } = fixtureSession({ overrides: { empty: zeroWeek } });
+    const db = await session.players();
+    const row = (await rosterCommand(session, "me")).split("\n").find((l) => l.includes(db.get(id)!.full_name!))!;
+    const [total, avg] = row.trim().split(/\s+/).slice(-3, -1);
+    expect(total).toBe(week3.toFixed(1));
+    expect(avg).toBe(week3.toFixed(1));
+  });
+
   it("refuses ambiguous or unknown team names", async () => {
     const { session } = fixtureSession();
     await expect(rosterCommand(session, "manager")).rejects.toBeInstanceOf(UsageError);
