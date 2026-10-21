@@ -101,7 +101,7 @@ Successful one-shot GM runs and interactive exits print private backup status. R
 | Live or past matchup, slot by slot | `ff matchups` (`--week N`) |
 | Points I left on the bench (hindsight) | `ff bench --week N` (`--league` for every team) |
 | Standings | `ff standings` |
-| Every team at a glance: QBs, positional counts, age, future 1sts | `ff rosters` |
+| Every team at a glance: QBs, positional counts, age, future 1sts, non-QB SUPER_FLEX starts, active/IR fullness | `ff rosters` |
 | Free agents | `ff free-agents --pos TE --limit 20` (`--all` drops the relevance filter) |
 | Who's being added across Sleeper | `ff trending` (`--type drop`, `--hours 48`) |
 | Waiver run times, FAAB left per team, past winning bids | `ff waivers` |
@@ -109,7 +109,7 @@ Successful one-shot GM runs and interactive exits print private backup status. R
 | What changed since I last looked | `ff changes` (advances the baseline; `--no-write` just peeks) |
 | One player | `ff player "Name"` |
 | Dynasty market values | `ff values` (`--league` for every team) |
-| Is this trade fair on market value? | `ff trade "Player A, 2027 R2 (own)" "Player B" --with <manager>` |
+| Is this trade fair on market value, and what does it do to both rosters and lineups? | `ff trade "Player A, 2027 R2 (own)" "Player B" --with <manager>` |
 | Future pick ownership | `ff picks` |
 | A manager's trade history and tendencies | `ff history <manager>` |
 | Private repository backup status | `ff backup` |
@@ -122,7 +122,7 @@ Tracked with impact and verdict under Open in [Project state](docs/PROJECT_STATE
 
 - **PPG and last-3 numbers are nflverse stats scored with the league's settings.** nflverse has no special-teams split, so `st_fum_rec` comes from opponent fumble recoveries and `st_ff` counts as 0 (D-022, disclosed in the stats label). Any other rule the source cannot supply makes scoring refuse. Sleeper's own weekly points (`ff roster`, `matchups`, `bench`, `player`) are exact.
 - **No projections.** Start/sit advice comes from the GM's web research and implied team totals.
-- **`ff trade` checks market value and ownership only.** It refuses assets on the wrong side, free agents, and ambiguous picks, but does not check roster fit, drops, or lineup impact.
+- **`ff trade` checks market value, ownership, drops and lineup change.** It refuses assets on the wrong side, free agents, and ambiguous picks. For both teams it shows active/IR counts, required drops, and the best lineup before and after from season averages of Sleeper's recorded points (not a projection). It does not judge roster fit.
 - **Market values** refresh at most once an hour (FantasyCalc's terms). Player downloads are coordinated across parallel agents and attempted at most once per 24 hours, including failures (`--refresh-players` can retry when no cache exists); a failed refresh uses a valid stale cache when available.
 - **No scheduling.** Briefs run when you run them.
 
