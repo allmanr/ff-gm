@@ -324,6 +324,7 @@ if (output >= 0 && !process.env.CODEX_EMPTY) fs.writeFileSync(args[output + 1], 
       expect(brief(name)).toContain("confirmed in the Sleeper app");
     }
     expect(brief("recap")).toContain("`notes/archive/recommendations-<season>.md`");
+    expect(brief("recap")).toContain("never use the recommendation date for this cutoff");
     expect(readFileSync(join(repoRoot, "gm/CHARTER.md"), "utf8")).toContain("Read it only when a past recommendation is relevant");
   });
 
