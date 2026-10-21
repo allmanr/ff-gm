@@ -120,7 +120,7 @@ Successful one-shot GM runs and interactive exits print private backup status. R
 
 Tracked with impact and verdict under Open in [Project state](docs/PROJECT_STATE.md).
 
-- **No PPG or last-3 numbers.** nflverse scoring refuses any active rule the source cannot supply, and this league enables `st_ff` and `st_fum_rec`. The `ff free-agents` PPG/L3 columns are blank, `--sort ppg` falls back to market value, and `npm run verify-scoring` exits nonzero. Sleeper's own weekly points (`ff roster`, `matchups`, `bench`, `player`) are exact.
+- **PPG and last-3 numbers are nflverse stats scored with the league's settings.** nflverse has no special-teams split, so `st_fum_rec` comes from opponent fumble recoveries and `st_ff` counts as 0 (D-022, disclosed in the stats label). Any other rule the source cannot supply makes scoring refuse. Sleeper's own weekly points (`ff roster`, `matchups`, `bench`, `player`) are exact.
 - **No projections.** Start/sit advice comes from the GM's web research and implied team totals.
 - **`ff trade` checks market value and ownership only.** It refuses assets on the wrong side, free agents, and ambiguous picks, but does not check roster fit, drops, or lineup impact.
 - **Market values** refresh at most once an hour (FantasyCalc's terms). Player downloads are coordinated across parallel agents and attempted at most once per 24 hours, including failures (`--refresh-players` can retry when no cache exists); a failed refresh uses a valid stale cache when available.

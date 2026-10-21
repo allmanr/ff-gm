@@ -3,7 +3,7 @@ import { join } from "node:path";
 import type { LeagueContext } from "./context.ts";
 import type { PlayerDb } from "./players.ts";
 import { parseCsv } from "./schedule.ts";
-import { requireSupportedScoring, scoreStatLine, STAT_COLUMNS, type StatLine } from "./scoring.ts";
+import { APPROXIMATED_KEYS, requireSupportedScoring, scoreStatLine, STAT_COLUMNS, type StatLine } from "./scoring.ts";
 import { isStartable } from "./positions.ts";
 
 /** nflverse weekly player stats and season rosters (CC-BY-4.0). Rosters map gsis_id → sleeper_id. */
@@ -91,6 +91,9 @@ export function buildStatBook(args: {
   const stale = args.stale ?? false;
   const label =
     `${STATS_ATTRIBUTION}; scored with this league's settings` +
+    (args.ctx.scoring.some((x) => x.value !== 0 && APPROXIMATED_KEYS.includes(x.key))
+      ? " (st_ff counted as 0, st_fum_rec read from opponent fumble recoveries: no special-teams split in source)"
+      : "") +
     (unmatched ? `; ${unmatched} QB/RB/WR/TE stat lines had no Sleeper ID match` : "") +
     (stale ? " (STALE: refresh failed)" : "") +
     ".";

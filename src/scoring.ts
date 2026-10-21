@@ -31,13 +31,20 @@ const STAT_FOR_KEY: Record<string, (s: StatLine) => number> = {
   fum_lost: (s) => s.fumbles_lost_total ?? 0,
   fum_rec_td: (s) => s.fumble_recovery_tds ?? 0,
   st_td: (s) => s.special_teams_tds ?? 0,
+  // nflverse has no special-teams split (D-022). An offensive player recovers an opponent's fumble
+  // almost only on special teams; its forced fumbles include post-turnover plays Sleeper does not
+  // score as st_ff, so st_ff counts as 0. Disclosed in the stat-book label.
+  st_ff: () => 0,
+  st_fum_rec: (s) => s.fumble_recovery_opp ?? 0,
 };
+
+export const APPROXIMATED_KEYS = ["st_ff", "st_fum_rec"];
 
 export const STAT_COLUMNS = [
   "passing_yards", "passing_tds", "passing_interceptions", "passing_2pt_conversions", "attempts", "completions",
   "sacks_suffered", "passing_first_downs", "rushing_yards", "rushing_tds", "rushing_2pt_conversions", "carries",
   "rushing_first_downs", "receptions", "receiving_yards", "receiving_tds", "receiving_2pt_conversions", "targets",
-  "receiving_first_downs", "fumbles_total", "fumbles_lost_total", "fumble_recovery_tds", "special_teams_tds",
+  "receiving_first_downs", "fumbles_total", "fumbles_lost_total", "fumble_recovery_tds", "special_teams_tds", "fumble_recovery_opp",
 ] as const;
 
 /**
