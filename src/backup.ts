@@ -41,7 +41,7 @@ export function checkBackupStatus(repoDir = defaultPrivateDir()): BackupStatus {
   // The private directory sits inside the public checkout: require it to be its own repository root.
   const top = existsSync(repoDir) ? git(repoDir, "rev-parse", "--show-toplevel") : null;
   if (top === null || realpathSync(top) !== realpathSync(repoDir)) return unavailable("not a Git repository");
-  const porcelain = git(repoDir, "status", "--porcelain");
+  const porcelain = git(repoDir, "status", "--porcelain", "--untracked-files=normal");
   if (porcelain === null) return unavailable("git status failed");
   const uncommitted = porcelain ? porcelain.split("\n").length : 0;
   const ahead = git(repoDir, "rev-parse", "--abbrev-ref", "@{u}") === null ? null : Number(git(repoDir, "rev-list", "--count", "@{u}..HEAD") ?? NaN);

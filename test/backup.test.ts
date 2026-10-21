@@ -68,6 +68,7 @@ describe("checkBackupStatus", () => {
 
   it("reports dirty with counts only, never file names or contents", () => {
     const dir = repo(true);
+    git(dir, "config", "status.showUntrackedFiles", "no"); // must not hide new notes
     writeFileSync(join(dir, "secret_strategy_mandate.md"), "Confidential Owner mandate");
     writeFileSync(join(dir, "seed.md"), "changed\n");
     const status = checkBackupStatus(dir);

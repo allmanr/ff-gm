@@ -148,7 +148,7 @@ function main(): number {
 
 const SESSION_SUMMARY = "The Owner has ended this interactive session. Write a short dated handoff: material actions taken, every material recommendation made (confirm each is recorded in notes/recommendations.md), notes changed, and open follow-ups. Do not start new analysis or web searches. If nothing material happened, say so in one line.";
 
-/** Newest top-level interactive Codex session in `cwd` written since `since` (exec runs and subagent threads excluded). */
+/** Newest top-level terminal Codex session in `cwd` written since `since` (exec runs, IDE panels and subagent threads excluded). */
 // ponytail: reads Codex's rollout layout ($CODEX_HOME/sessions/**/rollout-*.jsonl, line 1 = session_meta); switch to a Codex flag if one appears.
 function interactiveSession(since: number, cwd: string): string | undefined {
   const root = join(process.env.CODEX_HOME || join(homedir(), ".codex"), "sessions");
@@ -157,11 +157,14 @@ function interactiveSession(since: number, cwd: string): string | undefined {
   for (const name of readdirSync(root, { recursive: true, encoding: "utf8" })) {
     const file = join(root, name);
     if (!name.endsWith(".jsonl")) continue;
-    const mtime = statSync(file).mtimeMs;
-    if (mtime < since || (newest && mtime <= newest.mtime)) continue;
-    let meta;
-    try { meta = JSON.parse(readFileSync(file, "utf8").split("\n", 1)[0]!).payload; } catch { continue; }
-    if (meta?.cwd === cwd && typeof meta.source === "string" && meta.source !== "exec" && typeof meta.id === "string") newest = { id: meta.id, mtime };
+    let mtime, meta;
+    try {
+      mtime = statSync(file).mtimeMs;
+      if (mtime < since || (newest && mtime <= newest.mtime)) continue;
+      meta = JSON.parse(readFileSync(file, "utf8").split("\n", 1)[0]!).payload;
+    } catch { continue; }
+    // Terminal UI sessions: originator "codex-tui" with a string source ("cli", or "vscode" in a VS Code terminal); subagent threads have object sources.
+    if (meta?.cwd === cwd && meta.originator === "codex-tui" && typeof meta.source === "string" && typeof meta.id === "string") newest = { id: meta.id, mtime };
   }
   return newest?.id;
 }

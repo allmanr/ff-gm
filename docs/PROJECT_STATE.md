@@ -19,7 +19,7 @@ Expected invariants, verified live on every run: dynasty, Superflex, full PPR, T
 
 ## Verification status
 
-Current gate (2026-10-20, branch `feat/issue-9-interactive-session-reports`): `npm run check` passes typecheck, lint, 232 offline tests across 15 files, and leak checks over 95 files. Live: `ff backup` reported clean / synced; a throwaway Codex 0.163.0 session confirmed `codex exec <options> resume <id> --json -o <file>` keeps the prior context and that rollout `payload.id` is that id. Not run live: a full interactive `ff-gm` session with summary, or a GM recap applying the closure rules.
+Current gate (2026-10-20, branch `feat/issue-9-interactive-session-reports`): `npm run check` passes typecheck, lint, 234 offline tests across 15 files, and leak checks over 95 files. Live: `ff backup` reported clean / synced. Throwaway Codex 0.163.0 probes confirmed: `codex exec <options> resume <id> --json -o <file>` keeps the prior context; rollout `payload.id` is that id; a terminal session records `source: "cli"`, `originator: "codex-tui"`; a turnless session writes no rollout; quitting with Ctrl+C exits 0. Mutation checks confirm each session-selection filter is tested. Not run live: a full `ff-gm` session with summary, or a GM recap applying the closure rules.
 
 Standing live facts (still true until re-checked):
 - `npm run verify-scoring` refuses because nflverse cannot supply `st_ff` and `st_fum_rec` (since 2026-10-02). The earlier 749/749 match assumed those were zero and does not prove coverage. Sleeper's recorded matchup points remain the actuals.

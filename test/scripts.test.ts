@@ -38,7 +38,19 @@ if (!args.includes("exec") && process.env.FAKE_ROLLOUT) {
   const dir = path.join(process.env.CODEX_HOME, "sessions/2026/10/20");
   fs.mkdirSync(dir, { recursive: true });
   const cwd = process.env.FAKE_ROLLOUT === "elsewhere" ? "/elsewhere" : process.env.FF_PRIVATE_DIR;
-  fs.writeFileSync(path.join(dir, "rollout-x.jsonl"), JSON.stringify({ type: "session_meta", payload: { id: "sess-1", cwd, source: "cli" } }) + "\\n");
+  const meta = (id, extra) => JSON.stringify({ type: "session_meta", payload: { id, cwd, source: "cli", originator: "codex-tui", ...extra } }) + "\\n";
+  if (process.env.FAKE_ROLLOUT !== "old") fs.writeFileSync(path.join(dir, "rollout-x.jsonl"), meta("sess-1", {}));
+  if (process.env.FAKE_ROLLOUT !== "elsewhere" && process.env.FAKE_ROLLOUT !== "1") {
+    // Newer, but not this terminal session: a one-shot run, a subagent thread, an IDE panel, an unreadable entry, plus an old session.
+    const later = new Date(Date.now() + 60000);
+    for (const [name, extra] of [["exec", { source: "exec", originator: "codex_exec" }], ["sub", { source: { subagent: {} } }], ["ide", { source: "vscode", originator: "codex_vscode" }]]) {
+      fs.writeFileSync(path.join(dir, \`rollout-\${name}.jsonl\`), meta(\`decoy-\${name}\`, extra));
+      fs.utimesSync(path.join(dir, \`rollout-\${name}.jsonl\`), later, later);
+    }
+    fs.symlinkSync(path.join(dir, "missing"), path.join(dir, "rollout-dead.jsonl"));
+    fs.writeFileSync(path.join(dir, "rollout-old.jsonl"), meta("decoy-old", {}));
+    fs.utimesSync(path.join(dir, "rollout-old.jsonl"), new Date(0), new Date(0));
+  }
 }
 if (process.env.CODEX_FAIL) process.exit(Number(process.env.CODEX_FAIL));
 const output = args.indexOf("-o");
@@ -210,6 +222,18 @@ console.log(JSON.stringify({ type: "thread.started", thread_id: "offline-test" }
       expect(run(repo, { ...env, FAKE_ROLLOUT: "1", CODEX_EMPTY: "1" }, []).status).toBe(1);
       const [report] = sessionReports(repo);
       expect(readFileSync(join(repo, "private/reports", report!), "utf8")).toMatch(/^# INCOMPLETE GM session\n\nSession summary failed/);
+    });
+
+    it("ignores newer one-shot, subagent, IDE, unreadable and old rollouts", () => {
+      const { repo, env } = launch();
+      expect(run(repo, { ...env, FAKE_ROLLOUT: "decoys" }, []).status).toBe(0);
+      expect(calls(repo)[1]).toContain("sess-1");
+    });
+
+    it("does not resume an older session when this one recorded nothing", () => {
+      const { repo, env } = launch();
+      expect(run(repo, { ...env, FAKE_ROLLOUT: "old" }, []).stderr).toContain("No GM session was recorded");
+      expect(calls(repo)).toHaveLength(1);
     });
 
     it("does not summarize a session from another directory", () => {
