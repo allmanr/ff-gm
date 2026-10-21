@@ -80,15 +80,19 @@ From the 2026-10-21 dynasty-strategy research pass (specialist research memo, sc
 
 ### Existing limitations and deferred work
 
-- **Private backup push** — `ff backup` and the end-of-run notice show unbacked-up state (Issue #10). Automatic push after GM sessions remains blocked by session permission policy (D-008/D-016). Run the displayed manual backup command `git -C private add -A && git -C private commit -m "..." && git -C private push` as needed. Data-loss risk only if this machine fails → Owner habit.
+- **Private backup push** — `ff backup` and the end-of-run notice show unbacked-up state (Issue #10). Automatic push after GM sessions remains blocked by session permission policy (D-008/D-016). Run the displayed manual backup command `git -C private add -A && git -C private commit -m "..." && git -C private push` as needed. Data-loss risk only if this machine fails → Owner habit. 2026-10-21 retro: 33 uncommitted changes (12 modified, 21 untracked), last private commit 2026-10-20 → back up now.
 - **Scheduled briefs + notifications** — needs a channel choice and a cron job on the Owner's machine (runs only while it is awake). → Owner decides.
-- **Plus usage** — one deep GM run used ~189k tokens. Use `FF_GM_EFFORT=medium` for routine questions; watch Codex limits in heavy weeks.
+- **Run cost and usage limit** — 2026-10-21 war-room briefs used ~2.8–3.1M input tokens each (96% cached) vs 0.57M on 2026-10-05; the Codex limit blocked a lineup brief and a specialist call on 2026-10-21. Print per-run token usage from the final `turn.completed` event, then trim context (#25 archive first); target a routine lineup brief under 1M input tokens. S → fix. Use `FF_GM_EFFORT=medium` for routine questions meanwhile.
+- **Recommendation closure never run** — the #7 lifecycle shipped, but no recap has graded a past call; entries before 2026-10-21 have no status. Run `ff-gm brief recap` after week 7 → fix (Owner run, no code).
+- **Docs overhead** — the `Base:` hash in this file forces a docs PR after every merge (#21, #22); `IMPLEMENTATION_PLAN.md` says no issues are open (5 are); the `AGENTS.md` deferred paragraph still lists AI Guru and Rookie Scout (built under D-019). XS → fix.
 - **Projections** — Sleeper supplies exact recorded matchup points; there is still no forward projection feed. FantasyPros Superflex ECR now covers weekly expert opinion (D-021). Options for real projections: derive from nflverse stats or FantasyPros API ($8.99/mo). → defer until ECR plus web research proves insufficient.
 - **Optional review findings (low impact, not fixed):** truncated `ff changes` snapshot crashes instead of re-baselining; commissioner pick moves in a newly added season are not listed as pick changes; `ff schedule` warns only on byes, not empty/no-team starters; a manager who changes between owner and co-owner splits into two `ff history` rows; picks FantasyCalc does not price count as 0 without a note in `ff values`.
 - **Bench verdict edge cases** — ties and commissioner-adjusted totals can be described incorrectly in hindsight text; does not change the lineup optimizer or Sleeper actuals → optional, deferred.
 - **FantasyCalc `te+`** — bonus size undocumented; mapped from the league's +0.5 and labeled → accept.
 
 ## Closed — don't reopen without new evidence
+
+- **2026-10-21 retrospective deferrals** ([notes](meetings/2026-10-21-retrospective.md)) → autonomous SRE agent (D-008), scheduler/notifications and hosting not felt in three weeks of use; stay deferred. Reopen only when an incident or missed routine shows a human run was not enough. The 2026-09-27 plan's supersession and the one direct-to-`main` docs commit (b18d4d0, before PR #13) are closed lessons.
 
 - **Dynasty research candidates not filed (2026-10-21)** → target-week header already fixed by PR #17 (the mis-targeted war-room report predates the merge; reopen only if a post-merge report mis-targets); market-phase line (opinion; the dynasty specialist owns timing); age-matrix code (`ff roster`/`ff values` show ages); rest-of-season bye matrix (`ff schedule --week N` covers it); franchise-direction memo (GM/Owner task, not engineering); FAAB calculator, memo length caps.
 
