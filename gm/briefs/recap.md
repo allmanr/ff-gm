@@ -10,5 +10,6 @@ Weekly recap, after Monday Night Football.
    - Record decision quality (process soundness using facts known at the time) strictly separately from observed outcome (actual points, stats, or transaction result in Sleeper).
    - If Sleeper records cannot verify whether the move was made or attempted, ask the Owner one concise question rather than guessing or assuming an unobserved move was declined.
    - Move closed recommendations from the Active / Open section to Closed history to keep open items easy to scan at the top.
+6. Archive old closures: move Closed history entries closed more than two weeks ago to `notes/archive/recommendations-<season>.md` (create it if missing). Append them unedited, oldest first; never rewrite or delete archived entries. Leave the Active / Open section untouched.
 
 Keep it short. End with the two or three things that matter for next week.

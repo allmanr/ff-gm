@@ -316,6 +316,17 @@ if (output >= 0 && !process.env.CODEX_EMPTY) fs.writeFileSync(args[output + 1], 
     expect(readdirSync(join(repo, "private/reports")).some((file) => file.endsWith(`-${brief}.md`))).toBe(true);
   });
 
+  it("weekly briefs open with the validated target week; war-room and daily add the calendar", () => {
+    const brief = (name: string) => readFileSync(join(repoRoot, "gm/briefs", `${name}.md`), "utf8");
+    for (const name of ["war-room", "daily", "lineup"]) expect(brief(name)).toContain("`Target: <season> week <N> (validated)`");
+    for (const name of ["war-room", "daily"]) {
+      expect(brief(name)).toContain("weeks to the trade-deadline setting");
+      expect(brief(name)).toContain("confirmed in the Sleeper app");
+    }
+    expect(brief("recap")).toContain("`notes/archive/recommendations-<season>.md`");
+    expect(readFileSync(join(repoRoot, "gm/CHARTER.md"), "utf8")).toContain("Read it only when a past recommendation is relevant");
+  });
+
   it("lists specialist availability without launching or requiring league validation", () => {
     const { repo, env } = launch();
     const result = run(repo, { ...env, FAIL_CONTEXT: "1" }, ["staff"]);
