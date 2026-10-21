@@ -287,6 +287,17 @@ describe("value commands", () => {
     expect(out).toContain(FANTASYCALC_ATTRIBUTION);
   });
 
+  it("moves picks from the same draft slot through tiers together", async () => {
+    const { session } = valuesSession();
+    const { ctx } = await session.data();
+    const ours = ctx.teams.find((t) => t.rosterId === FIXTURE_OWNER_ROSTER)!.managerName;
+    // Roster 2 holds our 2027 R4: both picks below come from our draft slot, so they share a tier.
+    // R3 tiers 400/200/100 and R4 tiers 300/100/0 net -100 at every tier, not -400 to +200.
+    const out = await tradeCommand(session, "2027 R3 (own)", `2027 R4 (via ${ours})`, "2");
+    expect(out).toContain("Net market value for us: -100");
+    expect(out).toContain("Pick tier range: net -100 to -100");
+  });
+
   it("never reads a 5-digit Sleeper ID as a draft pick", async () => {
     const { session } = valuesSession();
     const { rosters } = await session.data();

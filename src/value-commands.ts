@@ -4,7 +4,7 @@ import { header, shortTeam, table, teamLabel } from "./format.ts";
 import { playerName, type PlayerDb } from "./players.ts";
 import type { LeagueData, Session } from "./session.ts";
 import type { Roster } from "./sleeper/schemas.ts";
-import { PICK_TIER_NOTE, pickKey, pickTierRange, type ValueBook } from "./values.ts";
+import { PICK_TIER_NOTE, pickKey, pickTierRange, type PickTiers, type ValueBook } from "./values.ts";
 import { fantasyPosition, isStartable } from "./positions.ts";
 import type { LeagueContext } from "./context.ts";
 
@@ -123,7 +123,14 @@ export async function valuesCommand(session: Session, who: string | undefined, o
     .join("\n");
 }
 
-type TradeAsset = { label: string; value: number | null; holder: string; tiers?: { lo: number; hi: number } | undefined };
+type TradeAsset = {
+  label: string;
+  value: number | null;
+  holder: string;
+  tiers?: { lo: number; hi: number } | undefined;
+  /** Tier prices and the draft slot they depend on: picks from the same season and original team land in the same tier. */
+  tierPrices?: { slot: string; prices: PickTiers } | undefined;
+};
 
 type ParsedPickSpec = {
   season: string;
@@ -215,6 +222,9 @@ async function resolvePickAsset(
     value: book.picks.get(key) ?? null,
     holder: shortTeam(ctx, matched.ownerRosterId),
     tiers: pickTierRange(book, key),
+    tierPrices: book.pickTiers.has(key)
+      ? { slot: `${matched.season}:${matched.originalRosterId}`, prices: book.pickTiers.get(key)! }
+      : undefined,
   };
 }
 
@@ -369,9 +379,23 @@ export async function tradeCommand(
     ),
   ];
   const diff = sum(getAssets) - sum(giveAssets);
-  // Best and worst case: every tiered pick at its highest or lowest tier; other assets at their value.
-  const bound = (xs: TradeAsset[], end: "lo" | "hi") => xs.reduce((a, x) => a + (x.tiers?.[end] ?? x.value ?? 0), 0);
-  const tiered = [...giveAssets, ...getAssets].some((x) => x.tiers);
+  // Best and worst case over tier outcomes. Picks from the same season and original team share one
+  // draft slot, so they take the same tier together; each slot's tier is otherwise independent.
+  const tiered = [...giveAssets, ...getAssets].some((x) => x.tierPrices);
+  const fixed = (xs: TradeAsset[]) => xs.reduce((a, x) => a + (x.tierPrices ? 0 : (x.value ?? 0)), 0);
+  const slotNets = new Map<string, Record<keyof PickTiers, number>>();
+  for (const [xs, sign] of [[getAssets, 1], [giveAssets, -1]] as const) {
+    for (const x of xs) {
+      if (!x.tierPrices) continue;
+      const net = slotNets.get(x.tierPrices.slot) ?? { early: 0, mid: 0, late: 0 };
+      for (const t of ["early", "mid", "late"] as const) net[t] += sign * (x.tierPrices.prices[t] ?? x.value ?? 0);
+      slotNets.set(x.tierPrices.slot, net);
+    }
+  }
+  const base = fixed(getAssets) - fixed(giveAssets);
+  const outcomes = [...slotNets.values()].map((n) => [n.early, n.mid, n.late]);
+  const worst = base + outcomes.reduce((a, o) => a + Math.min(...o), 0);
+  const best = base + outcomes.reduce((a, o) => a + Math.max(...o), 0);
   const signed = (n: number) => `${n >= 0 ? "+" : ""}${n}`;
   const missing = [...giveAssets, ...getAssets].filter((x) => x.value === null).map((x) => x.label);
   const ownerPicks = picks.filter((p) => p.ownerRosterId === ownerRosterId);
@@ -385,7 +409,7 @@ export async function tradeCommand(
     "",
     `Net market value for us: ${diff >= 0 ? "+" : ""}${diff} (${sum(giveAssets) ? ((diff / sum(giveAssets)) * 100).toFixed(0) : "n/a"}% of what we give).`,
     tiered
-      ? `Pick tier range: net ${signed(bound(getAssets, "lo") - bound(giveAssets, "hi"))} to ${signed(bound(getAssets, "hi") - bound(giveAssets, "lo"))} ` +
+      ? `Pick tier range: net ${signed(worst)} to ${signed(best)} ` +
         `across early–late tiers. ${PICK_TIER_NOTE}`
       : null,
     missing.length ? `No market value for: ${missing.join(", ")} — the sum understates those assets.` : null,
