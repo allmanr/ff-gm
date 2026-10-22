@@ -1,6 +1,6 @@
 # Implementation plan
 
-**Updated:** 2026-10-20 · **Status:** Phases 1–4 built; recommendation closure, backup status and interactive reports merged in [PR #15](https://github.com/allmanr/ff-gm/pull/15) · **Decisions:** [D-015](DECISIONS.md), [D-018](DECISIONS.md), [D-019](DECISIONS.md) · **Target architecture (later):** [IMPLEMENTATION_SPEC.md](IMPLEMENTATION_SPEC.md)
+**Updated:** 2026-10-21 · **Status:** Phases 1–4 built; recommendation closure, backup status and interactive reports merged in [PR #15](https://github.com/allmanr/ff-gm/pull/15) · **Decisions:** [D-015](DECISIONS.md), [D-018](DECISIONS.md), [D-019](DECISIONS.md) · **Target architecture (later):** [IMPLEMENTATION_SPEC.md](IMPLEMENTATION_SPEC.md)
 
 Build the smallest thing that gives the Owner validated football advice this season. Add the next piece only when its absence is felt in real use.
 
@@ -41,7 +41,7 @@ League Watcher (`ff changes`), league history, FantasyCalc values, NFL schedule 
 
 ## Next engineering work
 
-See the engineering queue in [PROJECT_STATE.md](PROJECT_STATE.md#engineering-queue). PR #15 is merged and issues #7, #9, #10 and #11 are closed. No open GitHub issues remain. Use the documented limitations and Owner direction to select future work.
+See the engineering queue in [PROJECT_STATE.md](PROJECT_STATE.md#engineering-queue). Open issues and PRs are listed there; the [2026-10-21 retrospective](meetings/2026-10-21-retrospective.md) ranks the next actions.
 
 ## Deferred product work
 

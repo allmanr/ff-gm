@@ -50,7 +50,7 @@ Enforcement is mechanical, not a prompt: every `ff` data command validates the l
 
 ## Deferred, not rejected
 
-The autonomous Software Dev/SRE agent (D-008), AI Guru, Rookie Scout, hosted deployment, and scheduled jobs are deferred until V1 is in regular use. When the SRE agent is built, D-008's policy applies: low-risk repairs may auto-merge after automated gates pass; protected actions (secrets, permissions, billing, destructive data changes, disabling correctness gates, major architecture changes, budget increases) escalate to the Owner.
+The autonomous Software Dev/SRE agent (D-008), hosted deployment, and scheduled jobs are deferred until a concrete need is recorded in `docs/PROJECT_STATE.md`. AI Guru and Rookie Scout are built as GM specialists (D-019); `bin/ff-dev` is the Owner-launched engineering session, not the autonomous agent. When the SRE agent is built, D-008's policy applies: low-risk repairs may auto-merge after automated gates pass; protected actions (secrets, permissions, billing, destructive data changes, disabling correctness gates, major architecture changes, budget increases) escalate to the Owner.
 
 ## External data (D-018)
 

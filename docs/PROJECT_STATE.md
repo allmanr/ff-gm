@@ -1,6 +1,6 @@
 # Project State
 
-**Last updated:** 2026-10-21 · **Base:** `main` at a4d813f ([PR #28](https://github.com/allmanr/ff-gm/pull/28), squash merged). Issues #23–#25 and #27 have open PRs awaiting Owner review (#29–#31); #26 is deferred (Closed).
+**Last updated:** 2026-10-21 (after the [retrospective](meetings/2026-10-21-retrospective.md)). Issues #23–#25 and #27 have open PRs awaiting Owner review (#29–#31); #26 is deferred (Closed).
 
 ## Mission
 
@@ -70,6 +70,8 @@ Earlier per-PR gates (#2, #5, #12, #14, #15) are recorded in their PRs and in `g
 
 ### Engineering queue
 
+- [#34](https://github.com/allmanr/ff-gm/issues/34) — print per-run token usage at the end of every `ff-gm`/`ff-dev` run. First by Owner decision (retrospective action 3). S → fix.
+
 From the 2026-10-21 dynasty-strategy research pass. All open PRs pass `npm run check` offline. None was run against live Sleeper/FantasyCalc or a live GM session in the cloud run that built them. The PRs merge cleanly in any order (#29 and #30 both touch `src/value-commands.ts`; a local merge of the two was checked).
 
 - [#23](https://github.com/allmanr/ff-gm/issues/23) → [PR #29](https://github.com/allmanr/ff-gm/pull/29), awaiting review. `ff values`/`ff trade` show FantasyCalc early–late ranges for next-draft picks and a net-value tier range. `ff values --league` notes unpriced picks counted as 0. Impact: high per pick trade; display-only. Unverified: live FantasyCalc tier-row names (if they differ, no range is shown).
@@ -82,13 +84,14 @@ From the 2026-10-21 dynasty-strategy research pass. All open PRs pass `npm run c
 - **Run cost and usage limit** — 2026-10-21 war-room briefs used ~2.8–3.1M input tokens each (96% cached) vs 0.57M on 2026-10-05; the Codex limit blocked a lineup brief and a specialist call on 2026-10-21. Print per-run token usage from the final `turn.completed` event ([#34](https://github.com/allmanr/ff-gm/issues/34), ahead of the #23 queue by Owner decision), then trim context (#25 archive first); target a routine lineup brief under 1M input tokens. S → fix. Use `FF_GM_EFFORT=medium` for routine questions meanwhile.
 - **Recommendation closure never run** — the #7 lifecycle shipped, but no recap has graded a past call; entries before 2026-10-21 have no status. Run `ff-gm brief recap` after week 7 → fix (Owner run, no code).
 - **League renewal untested** — when the 2027 league exists, every `ff` command fails closed asking for a manual `LEAGUE_ID` edit (`src/context.ts:168`); never exercised live. → optional: dry-run the edit once the successor league exists, before the rookie draft.
-- **Docs overhead** — the `Base:` hash in this file forces a docs PR after every merge (#21, #22); `IMPLEMENTATION_PLAN.md` says no issues are open (several are); the `AGENTS.md` deferred paragraph still lists AI Guru and Rookie Scout (built under D-019). XS → fix.
 - **Projections** — Sleeper supplies exact recorded matchup points; there is still no forward projection feed. FantasyPros Superflex ECR now covers weekly expert opinion (D-021). Options for real projections: derive from nflverse stats or FantasyPros API ($8.99/mo). → defer until ECR plus web research proves insufficient.
 - **Optional review findings (low impact, not fixed):** truncated `ff changes` snapshot crashes instead of re-baselining; commissioner pick moves in a newly added season are not listed as pick changes; `ff schedule` warns only on byes, not empty/no-team starters; a manager who changes between owner and co-owner splits into two `ff history` rows; picks FantasyCalc does not price count as 0 without a note in `ff values` (note added by PR #29, pending merge).
 - **Bench verdict edge cases** — ties and commissioner-adjusted totals can be described incorrectly in hindsight text; does not change the lineup optimizer or Sleeper actuals → optional, deferred.
 - **FantasyCalc `te+`** — bonus size undocumented; mapped from the league's +0.5 and labeled → accept.
 
 ## Closed — don't reopen without new evidence
+
+- **Docs overhead (2026-10-21 retro)** → fixed: no `Base:` commit hash in this file (git log has it), so merges no longer need a follow-up docs PR; stale lines in `IMPLEMENTATION_PLAN.md` and `AGENTS.md` corrected.
 
 - **2026-10-21 retrospective deferrals** ([notes](meetings/2026-10-21-retrospective.md)) → autonomous SRE agent (D-008), scheduled briefs/notifications (would need a channel choice and a cron job on the Owner's machine) and hosting not felt in three weeks of use; stay deferred. Reopen only when an incident or missed routine shows a human run was not enough. The 2026-09-27 plan's supersession and the one direct-to-`main` docs commit (b18d4d0, before PR #13) are closed lessons.
 
