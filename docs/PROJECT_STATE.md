@@ -1,6 +1,6 @@
 # Project State
 
-**Last updated:** 2026-10-21 · **Base:** `main` at a4d813f ([PR #28](https://github.com/allmanr/ff-gm/pull/28), squash merged). Issues #23–#25 and #27 have open PRs awaiting Owner review (#29–#31); #26 is deferred (Closed).
+**Last updated:** 2026-10-21 · **Base:** `main` at 438e8b3 ([PR #33](https://github.com/allmanr/ff-gm/pull/33), squash merged). Issues #23–#25 and #27 have open PRs awaiting Owner review (#29–#31); #26 is deferred (Closed).
 
 ## Mission
 
