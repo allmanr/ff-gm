@@ -12,3 +12,7 @@ Agents should **not** load every meeting note by default. Read `PROJECT_STATE.md
 ## 2026-10-02
 
 - [`meetings/2026-10-02-lean-v1-review.md`](meetings/2026-10-02-lean-v1-review.md) — Overengineering review, lean V1 decision (CLI + one Codex GM), private data folder, deferred SRE/hosting; same-day build outcome, verification, reviews, and data-source policy (D-018).
+
+## 2026-10-21
+
+- [`meetings/2026-10-21-retrospective.md`](meetings/2026-10-21-retrospective.md) — Project retrospective through PR #28: plan vs. shipped, what worked/didn't, run cost and usage limit, unrun closure loop, docs overhead, deferred items, ranked next actions.
