@@ -14,7 +14,7 @@ import { fixture, fixtureFetch, fixtureOwner, fixtureSession, FIXTURE_OWNER_ROST
 type RosterJson = { roster_id: number; players: string[]; reserve: string[] | null };
 
 /** Synthetic market values (not FantasyCalc data): 1000 + roster_id*10 + index for every rostered player. */
-function syntheticValues() {
+function syntheticValues({ tiers = true, skip = [] as string[] } = {}) {
   const players = fixture<Record<string, { full_name?: string; position?: string }>>("players");
   const rows: unknown[] = [];
   for (const r of fixture<RosterJson[]>("rosters")) {
@@ -27,11 +27,20 @@ function syntheticValues() {
       });
     });
   }
+  // Generic picks for both seasons; Early/Mid/Late rows (generic +200 / +0 / -100) for the next draft only.
+  const pick = (name: string, value: number) => {
+    if (!skip.includes(name)) rows.push({ player: { name, sleeperId: `FP_${name}`, position: "PICK" }, value, overallRank: 1, positionRank: 1 });
+  };
   for (const season of ["2027", "2028"]) {
-    ["1st", "2nd", "3rd", "4th"].forEach((rd, i) =>
-      rows.push({ player: { name: `${season} ${rd}`, sleeperId: `FP_${season}_${i}`, position: "PICK" }, value: 400 - i * 100, overallRank: 1, positionRank: 1 }),
-    );
-    rows.push({ player: { name: `${season} 1st (Early)`, sleeperId: `FP_${season}_e`, position: "PICK" }, value: 9999, overallRank: 1, positionRank: 1 });
+    ["1st", "2nd", "3rd", "4th"].forEach((rd, i) => {
+      const generic = 400 - i * 100;
+      pick(`${season} ${rd}`, generic);
+      if (tiers && season === "2027") {
+        pick(`${season} ${rd} (Early)`, generic + 200);
+        pick(`${season} ${rd} (Mid)`, generic);
+        pick(`${season} ${rd} (Late)`, generic - 100);
+      }
+    });
   }
   return rows;
 }
@@ -227,7 +236,27 @@ describe("value commands", () => {
     // Only QB/RB/WR/TE count toward position totals; every fixture roster player is one of those.
     expect(playersTotal).toBe(expected);
     expect(out).toContain(FANTASYCALC_ATTRIBUTION);
-    expect(out).toMatch(/2027 R1\s+400/); // generic pick value, not the "(Early)" variant
+    expect(out).toMatch(/2027 R1\s+400 \(600–300\)/); // generic headline, then the early–late range
+    expect(out).toMatch(/2028 R1\s+400\s*$/m); // generic only: FantasyCalc has no 2028 tiers
+    expect(out).toContain("FantasyCalc tier boundaries are undocumented");
+  });
+
+  it("shows no tier range when the payload has no tier rows", async () => {
+    const { session } = valuesSession(vi.fn(async (_url: string) => Response.json(syntheticValues({ tiers: false }))));
+    const out = await valuesCommand(session, "me", {});
+    expect(out).toMatch(/2027 R1\s+400\s*$/m);
+    expect(out).not.toContain("early–late");
+    const { rosters } = await session.data();
+    const give = rosters.find((r) => r.roster_id === FIXTURE_OWNER_ROSTER)!.players[0]!;
+    expect(await tradeCommand(session, `${give}, 2027 R2 (own)`, "2028 1st", "2")).not.toContain("tier range");
+  });
+
+  it("notes owned picks that FantasyCalc does not price", async () => {
+    const { session } = valuesSession();
+    expect(await valuesCommand(session, undefined, { league: true })).not.toContain("no FantasyCalc price");
+    const missing = valuesSession(vi.fn(async (_url: string) => Response.json(syntheticValues({ skip: ["2028 4th"] }))));
+    const out = await valuesCommand(missing.session, undefined, { league: true });
+    expect(out).toMatch(/\d+ owned picks have no FantasyCalc price and count as 0 \(2028 4th\)/);
   });
 
   it("ranks every team by market value", async () => {
@@ -250,8 +279,23 @@ describe("value commands", () => {
     expect(out).toContain(`We give (${giveValue})`);
     expect(out).toContain(`We get (${getValue})`);
     expect(out).toContain(`Net market value for us: ${getValue - giveValue >= 0 ? "+" : ""}${getValue - giveValue}`);
+    // 2027 2nd tiers are 500 (early) to 200 (late): best case we give the late tier, worst case the early.
+    const signed = (n: number) => `${n >= 0 ? "+" : ""}${n}`;
+    expect(out).toMatch(/2027 2nd pick \(own\)\s+300 \(500–200\)/);
+    expect(out).toContain(`Pick tier range: net ${signed(getValue - (giveValue + 200))} to ${signed(getValue - (giveValue - 100))}`);
     expect(out).toContain(db.get(get)!.full_name!);
     expect(out).toContain(FANTASYCALC_ATTRIBUTION);
+  });
+
+  it("moves picks from the same draft slot through tiers together", async () => {
+    const { session } = valuesSession();
+    const { ctx } = await session.data();
+    const ours = ctx.teams.find((t) => t.rosterId === FIXTURE_OWNER_ROSTER)!.managerName;
+    // Roster 2 holds our 2027 R4: both picks below come from our draft slot, so they share a tier.
+    // R3 tiers 400/200/100 and R4 tiers 300/100/0 net -100 at every tier, not -400 to +200.
+    const out = await tradeCommand(session, "2027 R3 (own)", `2027 R4 (via ${ours})`, "2");
+    expect(out).toContain("Net market value for us: -100");
+    expect(out).toContain("Pick tier range: net -100 to -100");
   });
 
   it("never reads a 5-digit Sleeper ID as a draft pick", async () => {

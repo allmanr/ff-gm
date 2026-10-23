@@ -4,7 +4,7 @@ import { header, shortTeam, table, teamLabel } from "./format.ts";
 import { playerName, type PlayerDb } from "./players.ts";
 import type { LeagueData, Session } from "./session.ts";
 import type { Roster } from "./sleeper/schemas.ts";
-import { pickKey, type ValueBook } from "./values.ts";
+import { PICK_TIER_NOTE, pickKey, pickTierRange, type PickTiers, type ValueBook } from "./values.ts";
 import { fantasyPosition, isStartable } from "./positions.ts";
 import type { LeagueContext } from "./context.ts";
 
@@ -12,6 +12,13 @@ async function requireValues(session: Session): Promise<ValueBook> {
   const { book, note } = await optionalValues(session);
   if (!book) throw new UsageError(note);
   return book;
+}
+
+/** Generic pick value, followed by FantasyCalc's tier range when it prices one. */
+function pickValueText(book: ValueBook, key: string): string {
+  const generic = book.picks.get(key);
+  const range = pickTierRange(book, key);
+  return `${generic ?? "-"}${range ? ` (${range.hi}–${range.lo})` : ""}`;
 }
 
 async function ownedPicks(session: Session, data: LeagueData, throughSeason?: string) {
@@ -47,6 +54,7 @@ export async function valuesCommand(session: Session, who: string | undefined, o
     picks.filter((p) => p.ownerRosterId === rosterId).reduce((sum, p) => sum + (book.picks.get(pickKey(p.season, p.round)) ?? 0), 0);
 
   if (opts.league) {
+    const unpriced = picks.filter((p) => !book.picks.has(pickKey(p.season, p.round)));
     const rows = standingsOrder(rosters)
       .map((r) => ({ r, v: rosterValue(r, db, book, ctx.roster.startablePositions), pk: pickValue(r.roster_id) }))
       .sort((a, b) => b.v.players + b.pk - (a.v.players + a.pk))
@@ -68,8 +76,13 @@ export async function valuesCommand(session: Session, who: string | undefined, o
       "",
       "Sums of market prices. Useful for spotting surpluses and needs, not a measure of lineup strength.",
       "Picks use generic round values for each season (no early/mid/late adjustment).",
+      unpriced.length
+        ? `${unpriced.length} owned picks have no FantasyCalc price and count as 0 (${[...new Set(unpriced.map((p) => pickKey(p.season, p.round)))].join(", ")}).`
+        : null,
       book.label,
-    ].join("\n");
+    ]
+      .filter((l): l is string => l !== null)
+      .join("\n");
   }
 
   const r = await resolveRoster(session, who);
@@ -90,23 +103,34 @@ export async function valuesCommand(session: Session, who: string | undefined, o
   const mine = picks.filter((p) => p.ownerRosterId === r.roster_id);
   const pickRows = mine.map((p) => [
     `${p.season} R${p.round}${p.originalRosterId === r.roster_id ? "" : ` (via ${shortTeam(ctx, p.originalRosterId)})`}`,
-    book.picks.get(pickKey(p.season, p.round)) ?? "-",
+    pickValueText(book, pickKey(p.season, p.round)),
   ]);
+  const tiered = mine.some((p) => pickTierRange(book, pickKey(p.season, p.round)));
   const total = rosterValue(r, db, book, ctx.roster.startablePositions);
   return [
     header(ctx, `Market values — ${teamLabel(ctx, r.roster_id)}`),
     "",
     table(["Player", "Pos", "NFL", "Age", "Value", "Pos rank", "30d trend"], rows),
     "",
-    table(["Pick", "Value"], pickRows),
+    table(["Pick", tiered ? "Value (early–late)" : "Value"], pickRows),
     "",
     `Totals: players ${total.players} (QB ${total.byPos.QB}, RB ${total.byPos.RB}, WR ${total.byPos.WR}, TE ${total.byPos.TE}), ` +
       `picks ${pickValue(r.roster_id)}; ${total.unvalued} players have no market value.`,
+    tiered ? `Pick totals use generic values; ranges are FantasyCalc's early–late prices. ${PICK_TIER_NOTE}` : null,
     book.label,
-  ].join("\n");
+  ]
+    .filter((l): l is string => l !== null)
+    .join("\n");
 }
 
-type TradeAsset = { label: string; value: number | null; holder: string };
+type TradeAsset = {
+  label: string;
+  value: number | null;
+  holder: string;
+  tiers?: { lo: number; hi: number } | undefined;
+  /** Tier prices and the draft slot they depend on: picks from the same season and original team land in the same tier. */
+  tierPrices?: { slot: string; prices: PickTiers } | undefined;
+};
 
 type ParsedPickSpec = {
   season: string;
@@ -197,6 +221,10 @@ async function resolvePickAsset(
     label: `${key} pick${origSuffix}`,
     value: book.picks.get(key) ?? null,
     holder: shortTeam(ctx, matched.ownerRosterId),
+    tiers: pickTierRange(book, key),
+    tierPrices: book.pickTiers.has(key)
+      ? { slot: `${matched.season}:${matched.originalRosterId}`, prices: book.pickTiers.get(key)! }
+      : undefined,
   };
 }
 
@@ -345,9 +373,30 @@ export async function tradeCommand(
   const sum = (xs: TradeAsset[]) => xs.reduce((a, x) => a + (x.value ?? 0), 0);
   const side = (title: string, xs: TradeAsset[]) => [
     `${title} (${sum(xs)})`,
-    table(["Asset", "Value", "On roster"], xs.map((x) => [x.label, x.value ?? "no value", x.holder])),
+    table(
+      ["Asset", "Value", "On roster"],
+      xs.map((x) => [x.label, `${x.value ?? "no value"}${x.tiers ? ` (${x.tiers.hi}–${x.tiers.lo})` : ""}`, x.holder]),
+    ),
   ];
   const diff = sum(getAssets) - sum(giveAssets);
+  // Best and worst case over tier outcomes. Picks from the same season and original team share one
+  // draft slot, so they take the same tier together; each slot's tier is otherwise independent.
+  const tiered = [...giveAssets, ...getAssets].some((x) => x.tierPrices);
+  const fixed = (xs: TradeAsset[]) => xs.reduce((a, x) => a + (x.tierPrices ? 0 : (x.value ?? 0)), 0);
+  const slotNets = new Map<string, Record<keyof PickTiers, number>>();
+  for (const [xs, sign] of [[getAssets, 1], [giveAssets, -1]] as const) {
+    for (const x of xs) {
+      if (!x.tierPrices) continue;
+      const net = slotNets.get(x.tierPrices.slot) ?? { early: 0, mid: 0, late: 0 };
+      for (const t of ["early", "mid", "late"] as const) net[t] += sign * (x.tierPrices.prices[t] ?? x.value ?? 0);
+      slotNets.set(x.tierPrices.slot, net);
+    }
+  }
+  const base = fixed(getAssets) - fixed(giveAssets);
+  const outcomes = [...slotNets.values()].map((n) => [n.early, n.mid, n.late]);
+  const worst = base + outcomes.reduce((a, o) => a + Math.min(...o), 0);
+  const best = base + outcomes.reduce((a, o) => a + Math.max(...o), 0);
+  const signed = (n: number) => `${n >= 0 ? "+" : ""}${n}`;
   const missing = [...giveAssets, ...getAssets].filter((x) => x.value === null).map((x) => x.label);
   const ownerPicks = picks.filter((p) => p.ownerRosterId === ownerRosterId);
 
@@ -359,6 +408,10 @@ export async function tradeCommand(
     ...side("We get", getAssets),
     "",
     `Net market value for us: ${diff >= 0 ? "+" : ""}${diff} (${sum(giveAssets) ? ((diff / sum(giveAssets)) * 100).toFixed(0) : "n/a"}% of what we give).`,
+    tiered
+      ? `Pick tier range: net ${signed(worst)} to ${signed(best)} ` +
+        `across early–late tiers. ${PICK_TIER_NOTE}`
+      : null,
     missing.length ? `No market value for: ${missing.join(", ")} — the sum understates those assets.` : null,
     beyond.length
       ? `${beyond.join(", ")} picks: no pick in that season has been traded, so each team holds its own. Sleeper does not publish the tradeable horizon; confirm in the app.`
