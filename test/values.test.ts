@@ -363,6 +363,15 @@ describe("value commands", () => {
     await expect(tradeCommand(session, mine, freeAgent)).rejects.toThrow(/free agent, not a trade asset/);
   });
 
+  it("rejects an asset listed twice", async () => {
+    const { session } = valuesSession();
+    const { rosters } = await session.data();
+    const mine = rosters.find((r) => r.roster_id === FIXTURE_OWNER_ROSTER)!.players[0]!;
+    const theirs = rosters.find((r) => r.roster_id === 7)!.players[1]!;
+    await expect(tradeCommand(session, mine, `${theirs}, ${theirs}`)).rejects.toThrow(/listed more than once/);
+    await expect(tradeCommand(session, `${mine}, 2027 R1 (own), 2027 1st (own)`, theirs)).rejects.toThrow(/listed more than once/);
+  });
+
   it("refuses ambiguous names and missing sides", async () => {
     const { session } = valuesSession();
     await expect(tradeCommand(session, "a", "b")).rejects.toBeInstanceOf(UsageError);

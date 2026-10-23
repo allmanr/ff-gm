@@ -27,7 +27,7 @@ Anchor "this week" to the NFL season and week in the current validated `ff` outp
 | League rules | `ff context` (rewrites the constitution) |
 | Owner's roster with weekly league points, FAAB left, picks | `ff roster` |
 | Another team | `ff roster <manager or roster id>` |
-| League overview: QB depth, ages, 1sts | `ff rosters` |
+| League overview: QB depth, ages, 1sts, non-QB SUPER_FLEX starts, active/IR fullness | `ff rosters` |
 | Standings | `ff standings` |
 | Future picks | `ff picks [team]` |
 | Waiver wire (league-scored PPG, with `st_ff`/`st_fum_rec` approximated per the stats label; blank if any other rule is unsupported — compare with dated game logs instead) | `ff free-agents [--pos QB,RB,WR,TE] [--limit N] [--sort ppg]` |
@@ -41,7 +41,7 @@ Anchor "this week" to the NFL season and week in the current validated `ff` outp
 | NFL games, byes, kickoffs (CT), Vegas lines/implied team totals, and the Owner's players' games | `ff schedule [--week N]` — check before every lineup |
 | One player | `ff player <name or Sleeper ID>` |
 | Dynasty market values (FantasyCalc) for a roster, or all teams | `ff values [team]`, `ff values --league` |
-| Market-value and ownership check of a trade | `ff trade "<we give>" "<we get>" --with <team>` (picks as `2027 R1 (own)` or `2027 R1 (via <team>)`) |
+| Market-value and ownership check of a trade, plus both teams' required drops and best-lineup change | `ff trade "<we give>" "<we get>" --with <team>` (picks as `2027 R1 (own)` or `2027 R1 (via <team>)`) |
 
 Use web search for injuries, practice reports, depth charts, snap/route/target shares, coaching changes, and Vegas lines. Prefer primary and recent sources (team reports, beat writers, official injury reports).
 

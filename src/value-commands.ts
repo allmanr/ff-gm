@@ -1,6 +1,7 @@
-import { optionalValues, resolveRoster, UsageError, type Options } from "./commands.ts";
-import { derivePickOwnership, rosterPlayerIds, standingsOrder, type PickOwnership } from "./domain.ts";
-import { header, shortTeam, table, teamLabel } from "./format.ts";
+import { optionalValues, resolveRoster, seasonPoints, UsageError, type Options } from "./commands.ts";
+import { derivePickOwnership, rosterPlayerIds, seasonAverage, standingsOrder, type PickOwnership } from "./domain.ts";
+import { header, pts, shortTeam, table, teamLabel } from "./format.ts";
+import { tradeImpact, type TradeImpact } from "./trade-impact.ts";
 import { playerName, type PlayerDb } from "./players.ts";
 import type { LeagueData, Session } from "./session.ts";
 import type { Roster } from "./sleeper/schemas.ts";
@@ -305,7 +306,7 @@ export async function tradeCommand(
   }
 
   // 2. Resolve "we give" assets
-  const giveAssets: TradeAsset[] = await Promise.all(rawGiveSpecs.map(async (spec) => {
+  const giveAssets: TradedAsset[] = await Promise.all(rawGiveSpecs.map(async (spec) => {
     const pick = parsePickSpec(spec, db);
     if (pick) {
       return resolvePickAsset(session, spec, pick, ownerRosterId, true, ctx, picks, book);
@@ -316,6 +317,7 @@ export async function tradeCommand(
       throw new UsageError(`Cannot give ${player.label}: not on our roster (${where}).`);
     }
     return {
+      playerId: player.id,
       label: player.label,
       value: player.value,
       holder: shortTeam(ctx, ownerRosterId),
@@ -323,7 +325,7 @@ export async function tradeCommand(
   }));
 
   // 3. Resolve "we get" assets
-  const getAssets: TradeAsset[] = await Promise.all(rawGetSpecs.map(async (spec) => {
+  const getAssets: TradedAsset[] = await Promise.all(rawGetSpecs.map(async (spec) => {
     const pick = parsePickSpec(spec, db);
     if (pick) {
       return resolvePickAsset(session, spec, pick, targetRoster.roster_id, false, ctx, picks, book);
@@ -336,11 +338,20 @@ export async function tradeCommand(
       );
     }
     return {
+      playerId: player.id,
       label: player.label,
       value: player.value,
       holder: shortTeam(ctx, targetRoster.roster_id),
     };
   }));
+
+  // A repeated asset would be counted twice in the sums and could start twice in a lineup.
+  const seen = new Set<string>();
+  for (const x of [...giveAssets, ...getAssets]) {
+    const key = x.playerId ?? x.label;
+    if (seen.has(key)) throw new UsageError(`${x.label} is listed more than once.`);
+    seen.add(key);
+  }
 
   const sum = (xs: TradeAsset[]) => xs.reduce((a, x) => a + (x.value ?? 0), 0);
   const side = (title: string, xs: TradeAsset[]) => [
@@ -350,6 +361,7 @@ export async function tradeCommand(
   const diff = sum(getAssets) - sum(giveAssets);
   const missing = [...giveAssets, ...getAssets].filter((x) => x.value === null).map((x) => x.label);
   const ownerPicks = picks.filter((p) => p.ownerRosterId === ownerRosterId);
+  const impact = await impactSection(session, db, ownerRosterId, targetRoster, giveAssets, getAssets);
 
   return [
     header(ctx, `Trade check: with ${teamLabel(ctx, targetRoster.roster_id)} (market value only)`),
@@ -363,15 +375,73 @@ export async function tradeCommand(
     beyond.length
       ? `${beyond.join(", ")} picks: no pick in that season has been traded, so each team holds its own. Sleeper does not publish the tradeable horizon; confirm in the app.`
       : null,
-    "Caveats: market prices only. Consolidating several pieces into one star usually costs a premium; judge roster fit,",
-    "lineup impact in this Superflex/TE-premium format, and required drops separately.",
+    "Caveats: market prices only. Consolidating several pieces into one star usually costs a premium; judge roster fit",
+    "in this Superflex/TE-premium format separately. Drops and lineup change are below.",
     ownerPicks.length
       ? `Our picks: ${ownerPicks
           .map((p) => `${p.season} R${p.round}${p.originalRosterId === p.ownerRosterId ? "" : ` (via ${shortTeam(ctx, p.originalRosterId)})`}`)
           .join(", ")}`
       : null,
     book.label,
+    "",
+    ...impact,
   ]
     .filter((l): l is string => l !== null)
     .join("\n");
+}
+
+/** A resolved trade asset; players carry their Sleeper ID for the roster and lineup impact. */
+type TradedAsset = TradeAsset & { playerId?: string };
+
+/** Both teams' roster counts and best lineups before and after the trade, from Sleeper data only. */
+async function impactSection(
+  session: Session,
+  db: PlayerDb,
+  ownerRosterId: number,
+  target: Roster,
+  give: TradedAsset[],
+  get: TradedAsset[],
+): Promise<string[]> {
+  const { ctx, league, rosters } = await session.data();
+  const { weeks, points } = await seasonPoints(session);
+  const lastScored = league.settings.last_scored_leg ?? 0;
+  const avg = (id: string) => seasonAverage(points.get(id), weeks, lastScored).avg;
+  const injured = new Set(rosters.flatMap((r) => r.reserve));
+  const ids = (xs: TradedAsset[]) => xs.flatMap((x) => x.playerId ?? []);
+  const ours = rosters.find((r) => r.roster_id === ownerRosterId)!;
+  const sides = [
+    tradeImpact({ ctx, db, roster: ours, sent: ids(give), received: ids(get), injured, avg }),
+    tradeImpact({ ctx, db, roster: target, sent: ids(get), received: ids(give), injured, avg }),
+  ];
+  const name = (s: TradeImpact) => (s.rosterId === ownerRosterId ? "us" : shortTeam(ctx, s.rosterId));
+  const signed = (n: number) => `${n >= 0 ? "+" : ""}${pts(n)}`;
+  const changes = (s: TradeImpact) => {
+    const started = (xs: typeof s.lineup.before) => new Map(xs.flatMap((x) => (x.id ? [[x.id, x] as const] : [])));
+    const before = started(s.lineup.before);
+    const after = started(s.lineup.after);
+    const fmt = (x: { slot: string; id: string | null; points: number }) => `${playerName(db, x.id!)} (${x.slot} ${pts(x.points)})`;
+    const out = [...before.values()].filter((x) => !after.has(x.id!)).map(fmt);
+    const into = [...after.values()].filter((x) => !before.has(x.id!)).map(fmt);
+    return `${name(s)}: ${out.length || into.length ? `out ${out.join(", ") || "none"}; in ${into.join(", ") || "none"}` : "no change"}`;
+  };
+  const unscored = sides.flatMap((s) => (s.unscored.length ? [`${name(s)}: ${s.unscored.map((id) => playerName(db, id)).join(", ")}`] : []));
+  return [
+    "Roster and lineup impact (Sleeper data; separate from market value)",
+    table(
+      ["Team", "Active", "IR", "Drops needed", "Best lineup", "After", "Change"],
+      sides.map((s) => [
+        name(s),
+        `${s.active.before}→${s.active.after}/${s.active.limit}`,
+        `${s.ir.after}/${s.ir.limit}`,
+        s.drops,
+        pts(s.lineup.beforeTotal),
+        pts(s.lineup.afterTotal),
+        signed(s.lineup.afterTotal - s.lineup.beforeTotal),
+      ]),
+    ),
+    `Starter changes — ${sides.map(changes).join(" · ")}`,
+    unscored.length ? `Unscored (no recorded points this season; left out, not counted as 0): ${unscored.join(" · ")}` : null,
+    "Lineups use historical league-scored averages (Sleeper players_points, 0.0 weeks skipped), not a projection, before any drops.",
+    "Received players count as active: Sleeper's placement of a traded IR player is unverified. IR and taxi players are left out of lineups.",
+  ].filter((l): l is string => l !== null);
 }

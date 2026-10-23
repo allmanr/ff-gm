@@ -3,7 +3,7 @@ import { assertPrivatePath, safeDirectory, safeWrite } from "./private-files.ts"
 import { paths } from "./config.ts";
 import { renderConstitution } from "./constitution.ts";
 import type { LeagueContext } from "./context.ts";
-import { derivePickOwnership, rosterPlayerIds, rosterPoints, standingsOrder, weeklyPlayerPoints, type PickOwnership, type WeeklyPoints } from "./domain.ts";
+import { derivePickOwnership, rosterCounts, rosterPlayerIds, rosterPoints, seasonAverage, standingsOrder, weeklyPlayerPoints, type PickOwnership, type WeeklyPoints } from "./domain.ts";
 import { ctTime, header, pts, shortTeam, table, teamLabel } from "./format.ts";
 import { playerLabel, playerName, type PlayerDb } from "./players.ts";
 import type { Session } from "./session.ts";
@@ -83,8 +83,22 @@ export async function standingsCommand(session: Session): Promise<string> {
 // ---------- rosters ----------
 
 export async function rostersCommand(session: Session): Promise<string> {
-  const { ctx, rosters, drafts } = await session.data();
-  const [db, traded] = await Promise.all([session.players(), session.tradedPicks()]);
+  const { ctx, rosters, drafts, league } = await session.data();
+  const lastScored = league.settings.last_scored_leg ?? 0;
+  const scoredWeeks = (await session.playedWeeks()).filter((w) => w <= lastScored);
+  const [db, traded, weekly] = await Promise.all([
+    session.players(),
+    session.tradedPicks(),
+    Promise.all(scoredWeeks.map((w) => session.matchups(w))),
+  ]);
+  // Saved starters are in roster_positions order; an empty slot is "0".
+  const sfSlots = ctx.roster.starterSlots.flatMap((s, i) => (s.slot === "SUPER_FLEX" ? [i] : []));
+  const sfNonQb = (rosterId: number) =>
+    weekly.filter((ms) => {
+      const m = ms.find((x) => x.roster_id === rosterId);
+      return m && sfSlots.some((i) => fantasyPosition(db.get(m.starters[i] ?? "0"), ctx.roster.startablePositions) !== "QB");
+    }).length;
+  const limit = ctx.roster.starterSlots.length + ctx.roster.benchSlots;
   const { seasons, picks } = derivePickOwnership({
     leagueSeason: ctx.season,
     rounds: ctx.draft.rounds ?? 0,
@@ -104,6 +118,7 @@ export async function rostersCommand(session: Session): Promise<string> {
     const avgAge = ages.length ? (ages.reduce((a, b) => a + b, 0) / ages.length).toFixed(1) : "-";
     const firsts = seasons.map((s) => picks.filter((p) => p.season === s && p.round === 1 && p.ownerRosterId === r.roster_id).length);
     const s = r.settings;
+    const counts = rosterCounts(r);
     return [
       shortTeam(ctx, r.roster_id),
       `${s.wins}-${s.losses}${s.ties ? `-${s.ties}` : ""}`,
@@ -114,14 +129,21 @@ export async function rostersCommand(session: Session): Promise<string> {
       byPos("TE").length,
       avgAge,
       firsts.join("/"),
+      sfNonQb(r.roster_id),
+      `${counts.active}/${limit} · ${counts.ir}/${ctx.roster.reserveSlots}`,
     ];
   });
   return [
     header(ctx, "All rosters"),
     "",
-    table(["Team", "W-L", "PF", "QBs", "RB", "WR", "TE", "Avg age", `1sts ${seasons.map((s) => s.slice(2)).join("/")}`], rows),
+    table(
+      ["Team", "W-L", "PF", "QBs", "RB", "WR", "TE", "Avg age", `1sts ${seasons.map((s) => s.slice(2)).join("/")}`, "SF non-QB", "Active/IR"],
+      rows,
+    ),
     "",
     `Pick seasons ${seasons.join(", ")} come from traded-pick data; Sleeper does not publish the tradeable horizon.`,
+    `SF non-QB: of ${scoredWeeks.length} scored weeks, those whose saved SUPER_FLEX starter was not a QB or was empty (historical, not a forecast). ` +
+      "Active/IR: active players against starter + bench slots, IR against reserve slots.",
   ].join("\n");
 }
 
@@ -153,7 +175,7 @@ export async function resolveRoster(session: Session, who: string | undefined): 
   return r;
 }
 
-async function seasonPoints(session: Session): Promise<{ weeks: number[]; points: WeeklyPoints }> {
+export async function seasonPoints(session: Session): Promise<{ weeks: number[]; points: WeeklyPoints }> {
   const weeks = await session.playedWeeks();
   const all = await Promise.all(weeks.map(async (week) => ({ week, matchups: await session.matchups(week) })));
   return { weeks, points: weeklyPlayerPoints(all) };
@@ -180,11 +202,7 @@ export async function rosterCommand(session: Session, who: string | undefined): 
     const p = db.get(id);
     const wk = points.get(id);
     const vals = weeks.map((w) => wk?.get(w)?.points);
-    const scored = weeks.filter((w) => w <= lastScored).map((w) => wk?.get(w)?.points).filter((v): v is number => v !== undefined);
-    const total = scored.reduce((a, b) => a + b, 0);
-    // Sleeper records 0 for a rostered player on bye, IR or inactive, so those weeks would drag the average down.
-    // ponytail: a genuine 0.0 game is skipped too; use nflverse participation if that distortion ever matters.
-    const played = scored.filter((v) => v !== 0);
+    const season = seasonAverage(wk, weeks, lastScored);
     return [
       slot,
       playerName(db, id),
@@ -194,8 +212,8 @@ export async function rosterCommand(session: Session, who: string | undefined): 
       p?.injury_status ?? "",
       byes && p?.team ? (byes.get(p.team)?.join("/") ?? "?") : "-",
       ...vals.map((v) => pts(v)),
-      scored.length ? pts(total) : "-",
-      played.length ? pts(total / played.length) : "-",
+      season.scoredWeeks ? pts(season.total) : "-",
+      season.avg === null ? "-" : pts(season.avg),
       values.book?.byPlayer.get(id)?.value ?? "-",
     ];
   };

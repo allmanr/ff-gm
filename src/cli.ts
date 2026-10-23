@@ -27,7 +27,7 @@ const HELP = `ff — validated Sleeper league data for the GM. Every command ver
 
   ff context                     validate, print the League Constitution, save it to private/
   ff standings                   records, points for/against, divisions
-  ff rosters                     every team: QBs, positional counts, age, future 1sts
+  ff rosters                     every team: QBs, positional counts, age, future 1sts, SF non-QB starts, active/IR
   ff roster [me|ID|name]         one roster with weekly league points and picks (default: me)
   ff picks [team]                future pick ownership
   ff free-agents [--pos QB,TE] [--limit N] [--all] [--sort value|ppg]
@@ -41,7 +41,7 @@ const HELP = `ff — validated Sleeper league data for the GM. Every command ver
   ff history [manager] [--limit N]  trades across all seasons with per-manager tendencies
   ff changes [--no-write]        what changed in the league since the last run (snapshot in private/)
   ff values [me|team] [--league]  dynasty market values (FantasyCalc) for a roster, or every team
-  ff trade "<we give>" "<we get>" [--with <team>]  market-value check, e.g. ff trade "Player A, 2027 R2 (own)" "Player B"
+  ff trade "<we give>" "<we get>" [--with <team>]  market value, drops and lineup change for both teams, e.g. ff trade "Player A, 2027 R2 (own)" "Player B"
   ff backup                      private repository backup and git sync status
 
   --refresh-players  refresh Sleeper's player database when its 24-hour cache expires, or retry a failed download when there is no cache

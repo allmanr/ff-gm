@@ -71,6 +71,30 @@ export function weeklyPlayerPoints(weeks: { week: number; matchups: Matchup[] }[
   return out;
 }
 
+/**
+ * A player's season points through the last scored week, as `ff roster` and `ff trade` show them.
+ * Sleeper records 0 for a rostered player on bye, IR or inactive, so the average skips 0.0 weeks.
+ * ponytail: a genuine 0.0 game is skipped too; use nflverse participation if that distortion ever matters.
+ */
+export function seasonAverage(
+  byWeek: Map<number, { points: number }> | undefined,
+  weeks: number[],
+  lastScored: number,
+): { scoredWeeks: number; total: number; avg: number | null } {
+  const scored = weeks.filter((w) => w <= lastScored).map((w) => byWeek?.get(w)?.points).filter((v): v is number => v !== undefined);
+  const total = scored.reduce((a, b) => a + b, 0);
+  const played = scored.filter((v) => v !== 0);
+  return { scoredWeeks: scored.length, total, avg: played.length ? total / played.length : null };
+}
+
+/** Active (not IR or taxi), IR and taxi counts. Sleeper's `players` already includes IR and taxi players. */
+export function rosterCounts(r: Pick<Roster, "players" | "reserve" | "taxi">): { active: number; ir: number; taxi: number } {
+  const ids = new Set(r.players);
+  const reserve = new Set(r.reserve);
+  const taxi = new Set(r.taxi);
+  return { active: [...ids].filter((id) => !reserve.has(id) && !taxi.has(id)).length, ir: reserve.size, taxi: taxi.size };
+}
+
 export function rosterPoints(r: Roster): { pf: number; pa: number; maxPf: number | null } {
   const s = r.settings;
   const dec = (whole?: number, frac?: number) => (whole ?? 0) + (frac ?? 0) / 100;

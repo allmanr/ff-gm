@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   describeTransaction,
   freeAgentsCommand,
@@ -68,6 +68,36 @@ describe("commands on recorded data", () => {
     await expect(rosterCommand(session, "manager")).rejects.toBeInstanceOf(UsageError);
     await expect(rosterCommand(session, "nobody-here")).rejects.toBeInstanceOf(UsageError);
     await expect(rosterCommand(session, "manager05")).resolves.toMatch(/Roster —/);
+  });
+
+  it("counts non-QB SUPER_FLEX starts and roster fullness in ff rosters", async () => {
+    const rosters = fixture<{ roster_id: number; players: string[]; reserve: string[] | null }[]>("rosters");
+    const players = fixture<Record<string, { position?: string }>>("players");
+    const week3 = fixture<{ roster_id: number; starters: string[] }[]>("matchups_3");
+    const sf = fixture<{ roster_positions: string[] }>("league").roster_positions.indexOf("SUPER_FLEX");
+    const wr = Object.keys(players).find((id) => players[id]!.position === "WR")!;
+    const qb = Object.keys(players).find((id) => players[id]!.position === "QB")!;
+    // Every team starts a QB at SUPER_FLEX except the one roster under test.
+    const atSf = (rosterId: number, id: string) =>
+      week3.map((m) => ({ ...m, starters: m.starters.map((x, i) => (i === sf ? (m.roster_id === rosterId ? id : qb) : x)) }));
+    // Roster 5 starts a WR at SUPER_FLEX in weeks 1 and 3; roster 6 leaves it empty in week 2.
+    const byWeek = new Map([[1, atSf(5, wr)], [2, atSf(6, "0")], [3, atSf(5, wr)]]);
+    const { session } = fixtureSession();
+    const matchups = vi.spyOn(session, "matchups").mockImplementation(async (w: number) => byWeek.get(w) as never);
+    const out = await rostersCommand(session);
+    expect(matchups.mock.calls.map((c) => c[0])).toEqual([1, 2, 3]); // scored weeks only (last_scored_leg 3)
+    const { ctx } = await session.data();
+    const row = (id: number) => out.split("\n").find((l) => l.startsWith(`${ctx.teams.find((t) => t.rosterId === id)!.managerName}`))!;
+    const sfCell = (id: number) => row(id).trim().split(/\s+/).at(-4);
+    expect(sfCell(5)).toBe("2");
+    expect(sfCell(6)).toBe("1"); // an empty SUPER_FLEX slot counts as a non-QB start
+    expect(sfCell(1)).toBe("0");
+    const limit = ctx.roster.starterSlots.length + ctx.roster.benchSlots;
+    for (const r of rosters) {
+      const ir = r.reserve ?? [];
+      expect(row(r.roster_id)).toContain(`${r.players.filter((id) => !ir.includes(id)).length}/${limit} · ${ir.length}/${ctx.roster.reserveSlots}`);
+    }
+    expect(out).toContain("historical, not a forecast");
   });
 
   it("summarizes all rosters and picks", async () => {
