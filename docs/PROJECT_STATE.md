@@ -1,6 +1,6 @@
 # Project State
 
-**Last updated:** 2026-10-21 (after the [retrospective](meetings/2026-10-21-retrospective.md)). Issues #23–#25 and #27 have open PRs awaiting Owner review (#29–#31); #26 is deferred (Closed).
+**Last updated:** 2026-10-28 (engineering health refresh). Issues #23–#25 and #27 have open PRs awaiting Owner review (#29–#31); #26 is deferred (Closed).
 
 ## Mission
 
@@ -19,15 +19,20 @@ Expected invariants, verified live on every run: dynasty, Superflex, full PPR, T
 
 ## Verification status
 
+Engineering health refresh (2026-10-28, `main` 484a701; local tree clean before this doc edit, remote `main` matched): `npm run check` exited 0 on repeat — typecheck, lint, 249 offline tests across 16 files, and leak checks over 98 files passed. The first run exited 1 when one launcher argument-rejection test exceeded Vitest's 5-second timeout; its 11 cases passed in isolation, and all 249 tests passed on the full repeat. No runtime defect was established; a repeat gate may be needed if this timeout recurs. Live `npm run verify-scoring` exited 0 for weeks 1–7: 1,653 rostered player-weeks matched Sleeper, 0 differed. The D-022 special-teams approximations and rostered-player coverage limit still apply. GitHub inspection found PRs #29–#31 and issues #23–#27/#34 still open; #26 remains deferred by decision.
+
+Launcher-test follow-up (2026-10-28): argument-rejection cases now invoke the real `bin/ff-gm` against a file-blocked temporary private path, without initializing Git or copying the full GM fixture. They still require exit 2 and no agent artifacts, and now check usage output and an untouched workspace sentinel. A controlled run with Git initialization unavailable failed all 11 cases before this change and passed all 11 afterward. `npm run check` passed all 249 tests and its other gates after the change. The original timeout did not reproduce, so removing this unnecessary setup does not establish the cause of the transient host delay. The 5-second test timeout and runtime code are unchanged.
+
 Merge gate (2026-10-21, PR #19): subagent review findings fixed; CI and a fresh local `npm run check` passed typecheck, lint, 248 offline tests across 16 files, and leak checks over 97 files. Live `npm run verify-scoring` matched Sleeper on 1,438/1,438 rostered player-weeks. The reviewed head was 1ff5d87, squash merged as aa80d62.
 
-Interactive-session acceptance (PR #15) passed with Codex 0.163.0: launch `ff-gm`, ask a short non-football question, then quit with Ctrl+C. The launcher exited 0, saved a new nonempty `private/reports/*-session.md` handoff, and printed private backup status and the manual backup command. This verifies session capture and shutdown, not football advice quality. A live GM recap applying the recommendation closure rules has not been run.
+Interactive-session acceptance (PR #15) passed with Codex 0.163.0: launch `ff-gm`, ask a short non-football question, then quit with Ctrl+C. The launcher exited 0, saved a new nonempty `private/reports/*-session.md` handoff, and printed private backup status and the manual backup command. This verifies session capture and shutdown, not football advice quality.
 
 Earlier throwaway probes confirmed that `codex exec <options> resume <id> --json -o <file>` keeps prior context, rollout `payload.id` is the resume id, and a turnless terminal session writes no rollout. Offline tests cover session selection, failed summaries, and backup states. Session discovery still depends on Codex's rollout layout.
 
-Standing live facts (still true until re-checked):
-- `npm run verify-scoring` (2026-10-21, weeks 1–6): 1,438/1,438 rostered player-weeks match Sleeper, with `st_ff`/`st_fum_rec` approximated per D-022. Sleeper's recorded matchup points remain the actuals.
-- Specialist wiring (D-019) was verified live once; evidence is in `private/evaluations/specialist-acceptance/`. This shows wiring and bounded behavior, not advice quality.
+Additional acceptance evidence:
+- A coordinated live staff refresh (2026-10-28) consulted all five football specialists, saved distinct evidence memos, completed the AI Guru audit, and refreshed canonical strategy and manager context. This verifies delegation and saved artifacts for one run, not advice consistency or a performance benchmark.
+- First live recommendation-closure acceptance (2026-10-28) verified canonical log transitions against recorded evidence, retained unknown actions without guessing intent, and separated decision quality from observed outcomes. This is one completed lifecycle pass, not consistency evidence.
+- Original specialist wiring acceptance (D-019) is recorded in `private/evaluations/specialist-acceptance/`. This shows wiring and bounded behavior, not advice quality.
 - One bounded GM acceptance run (2026-10-05) is in `private/evaluations/`. It is not a consistency benchmark.
 
 Earlier per-PR gates (#2, #5, #12, #14, #15) are recorded in their PRs and in `git log`; they are not repeated here.
@@ -40,7 +45,7 @@ Earlier per-PR gates (#2, #5, #12, #14, #15) are recorded in their PRs and in `g
 
 - [PR #20](https://github.com/allmanr/ff-gm/pull/20), 2026-10-21: `ff roster` Avg skips 0.0 weeks. Sleeper records 0 for rostered players on bye, IR or inactive, which understated per-game averages (e.g. a WR back from four IR weeks showed 1.9 instead of 5.7). Weekly columns and Total are unchanged.
 
-- [PR #17](https://github.com/allmanr/ff-gm/pull/17): direct GM and engineering agent runs, plus interactive GM handoffs, show startup status, the private event-log path, and a 15-second heartbeat with elapsed time and event silence on stderr. Final reports remain on stdout. The war-room brief now targets the validated current NFL week; its previous explicit next-week instruction caused a one-week shift. Offline verification covers progress during a quiet child process, cancellation, report output, failures and interactive handoffs. Direct Codex children run in a separate process group; the launcher forwards SIGINT, SIGTERM, SIGHUP and SIGQUIT exactly once, including terminal closure. A new live football brief has not been run.
+- [PR #17](https://github.com/allmanr/ff-gm/pull/17): direct GM and engineering agent runs, plus interactive GM handoffs, show startup status, the private event-log path, and a 15-second heartbeat with elapsed time and event silence on stderr. Final reports remain on stdout. The war-room brief now targets the validated current NFL week; its previous explicit next-week instruction caused a one-week shift. Offline verification covers progress during a quiet child process, cancellation, report output, failures and interactive handoffs. Direct Codex children run in a separate process group; the launcher forwards SIGINT, SIGTERM, SIGHUP and SIGQUIT exactly once, including terminal closure. A live coordinated GM staff review ran on 2026-10-28; this does not exercise every recurring brief template.
 
 - [PR #15](https://github.com/allmanr/ff-gm/pull/15) squash merged after review, CI, local checks and live interactive acceptance. Issues #7, #9, #10 and #11 are closed.
 - [Issue #9, interactive session reports](https://github.com/allmanr/ff-gm/issues/9): when an interactive `ff-gm` session ends, the launcher finds that top-level Codex session (same private cwd, not exec or subagent) and resumes it once with `exec resume` to save `private/reports/<stamp>-session.md` covering actions, recommendations and follow-ups. Failed or interrupted sessions and failed summaries are saved as `# INCOMPLETE GM session`. README documents report names and the weekly commands. Session discovery reads Codex's rollout layout (marked `ponytail:` in `src/gm-launcher.ts`).
@@ -82,7 +87,6 @@ From the 2026-10-21 dynasty-strategy research pass. All open PRs pass `npm run c
 
 - **Private backup push** — `ff backup` and the end-of-run notice show unbacked-up state (Issue #10). Automatic push after GM sessions remains blocked by session permission policy (D-008/D-016). Run the displayed manual backup command `git -C private add -A && git -C private commit -m "..." && git -C private push` as needed. Data-loss risk only if this machine fails → Owner habit.
 - **Run cost and usage limit** — 2026-10-21 war-room briefs used ~2.8–3.1M input tokens each (96% cached) vs 0.57M on 2026-10-05; the Codex limit blocked a lineup brief and a specialist call on 2026-10-21. Print per-run token usage from the final `turn.completed` event ([#34](https://github.com/allmanr/ff-gm/issues/34), ahead of the #23 queue by Owner decision), then trim context (#25 archive first); target a routine lineup brief under 1M input tokens. S → fix. Use `FF_GM_EFFORT=medium` for routine questions meanwhile.
-- **Recommendation closure never run** — the #7 lifecycle shipped, but no recap has graded a past call; entries before 2026-10-21 have no status. Run `ff-gm brief recap` after week 7 → fix (Owner run, no code).
 - **League renewal untested** — when the 2027 league exists, every `ff` command fails closed asking for a manual `LEAGUE_ID` edit (`src/context.ts:168`); never exercised live. → optional: dry-run the edit once the successor league exists, before the rookie draft.
 - **Projections** — Sleeper supplies exact recorded matchup points; there is still no forward projection feed. FantasyPros Superflex ECR now covers weekly expert opinion (D-021). Options for real projections: derive from nflverse stats or FantasyPros API ($8.99/mo). → defer until ECR plus web research proves insufficient.
 - **Optional review findings (low impact, not fixed):** truncated `ff changes` snapshot crashes instead of re-baselining; commissioner pick moves in a newly added season are not listed as pick changes; `ff schedule` warns only on byes, not empty/no-team starters; a manager who changes between owner and co-owner splits into two `ff history` rows; picks FantasyCalc does not price count as 0 without a note in `ff values` (note added by PR #29, pending merge).
@@ -90,6 +94,8 @@ From the 2026-10-21 dynasty-strategy research pass. All open PRs pass `npm run c
 - **FantasyCalc `te+`** — bonus size undocumented; mapped from the league's +0.5 and labeled → accept.
 
 ## Closed — don't reopen without new evidence
+
+- **Recommendation closure live acceptance (2026-10-28)** completed with saved canonical statuses, evidence-backed closures, unknown-action handling, and separate process-quality and outcome assessments. The former never-run gap is closed. Continue the weekly lifecycle; one pass does not establish consistent advice quality.
 
 - **Docs overhead (2026-10-21 retro)** → fixed: no `Base:` commit hash in this file (git log has it), so merges no longer need a follow-up docs PR; stale lines in `IMPLEMENTATION_PLAN.md` and `AGENTS.md` corrected.
 

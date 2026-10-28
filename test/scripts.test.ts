@@ -451,10 +451,17 @@ if (output >= 0 && !process.env.CODEX_EMPTY) fs.writeFileSync(args[output + 1], 
     ["specialist", "software_dev", "repair"], ["specialist", "../software_dev", "repair"],
     ["ask"], ["ask", " "], ["ask", " ", " "],
   ])("rejects unsafe or malformed arguments %j before running Codex", (...args) => {
-    const { repo, env } = launch();
-    expect(run(repo, env, args).status).toBe(2);
-    expect(existsSync(join(repo, "private/codex-args.json"))).toBe(false);
-    expect(existsSync(join(repo, "private/AGENTS.md"))).toBe(false);
+    const dir = mkdtempSync(join(tmpdir(), "ff-invalid-args-"));
+    temporary.push(dir);
+    const privateDir = join(dir, "private");
+    // A file blocks workspace setup before any real ff/network call if rejection regresses.
+    writeFileSync(privateDir, "Untouched workspace sentinel\n");
+    const result = run(repoRoot, { ...process.env, FF_PRIVATE_DIR: privateDir }, args);
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain("Usage: ff-gm");
+    expect(readFileSync(privateDir, "utf8")).toBe("Untouched workspace sentinel\n");
+    expect(existsSync(join(privateDir, "codex-args.json"))).toBe(false);
+    expect(existsSync(join(privateDir, "AGENTS.md"))).toBe(false);
   });
 
   it.each([".", "src", "gm"])("rejects a private workspace at public path %s", (path) => {
